@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import BettingModal from './BettingModal';
+import PotDistribution from './PotDistribution';
 
 interface Player {
     id: string;
@@ -36,6 +37,9 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
     // Betting modal state
     const [bettingModalOpen, setBettingModalOpen] = useState(false);
     const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
+
+    // Pot distribution state
+    const [potDistributionOpen, setPotDistributionOpen] = useState(false);
 
     // Save game state to localStorage
     useEffect(() => {
@@ -118,6 +122,35 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
     const handleCancelBet = () => {
         setBettingModalOpen(false);
         setSelectedPlayer(null);
+    };
+
+    const handleEndHand = () => {
+        // Open pot distribution modal instead of immediately resetting
+        if (pot > 0) {
+            setPotDistributionOpen(true);
+        } else {
+            // If no pot, just reset for new hand
+            handleNewHand();
+        }
+    };
+
+    const handlePotDistribution = (winners: string[], distribution: { [playerId: string]: number }) => {
+        // Update player chip counts with winnings
+        setPlayers(prev => prev.map(player => ({
+            ...player,
+            chips: player.chips + (distribution[player.id] || 0),
+            status: player.chips + (distribution[player.id] || 0) > 0 ? 'active' as const : 'folded' as const,
+            currentBet: 0
+        })));
+
+        // Reset pot and current bet
+        setPot(0);
+        setCurrentBet(0);
+        setPotDistributionOpen(false);
+    };
+
+    const handleCancelDistribution = () => {
+        setPotDistributionOpen(false);
     };
 
     const handleNewHand = () => {
@@ -267,13 +300,14 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
                 </div>
             </div>
 
-            {/* Bottom Section - New Hand Button */}
+            {/* Bottom Section - End Hand / New Hand Button */}
             <div className="bg-dark-800 border-t border-dark-600 p-4">
                 <button
-                    onClick={handleNewHand}
+                    onClick={handleEndHand}
                     className="btn-primary w-full"
+                    disabled={pot === 0 && players.every(p => p.currentBet === 0)}
                 >
-                    🃏 New Hand
+                    {pot > 0 ? '🏆 End Hand & Distribute Pot' : '🃏 New Hand'}
                 </button>
 
                 {/* Game Stats */}
@@ -292,6 +326,15 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
                 potSize={pot}
                 onConfirm={handleConfirmBet}
                 onCancel={handleCancelBet}
+            />
+
+            {/* Pot Distribution Modal */}
+            <PotDistribution
+                isOpen={potDistributionOpen}
+                players={players}
+                potAmount={pot}
+                onDistribute={handlePotDistribution}
+                onCancel={handleCancelDistribution}
             />
         </div>
     );
