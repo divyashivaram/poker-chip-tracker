@@ -1,16 +1,19 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   html {
-    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     height: 100%;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
   }
 
   body {
     margin: 0;
-    background-color: #111111;
+    background: linear-gradient(135deg, #0a0a0a 0%, #111111 50%, #0a0a0a 100%);
+    background-attachment: fixed;
     color: #ffffff;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -44,59 +47,96 @@
 }
 
 @layer components {
+
+  /* Modern glassmorphic buttons */
   .btn-primary {
-    @apply bg-poker-green hover:bg-green-600 active:bg-green-700 text-white font-semibold py-4 px-8 rounded-lg shadow-lg transition-all duration-200 text-lg min-h-[56px] touch-manipulation transform hover:scale-105 active:scale-95;
+    @apply relative overflow-hidden bg-gradient-to-r from-poker-green-600 to-poker-green-700 hover:from-poker-green-500 hover:to-poker-green-600 active:from-poker-green-700 active:to-poker-green-800 text-white font-semibold py-4 px-8 rounded-xl shadow-lg shadow-poker-green-900/20 transition-all duration-300 text-lg min-h-[56px] touch-manipulation transform hover:scale-105 active:scale-95 hover:shadow-glow border border-poker-green-500/20;
+  }
+
+  .btn-primary::before {
+    content: '';
+    @apply absolute inset-0 bg-gradient-to-r from-white/10 to-transparent opacity-0 hover:opacity-100 transition-opacity duration-300;
   }
 
   .btn-secondary {
-    @apply bg-dark-600 hover:bg-dark-500 active:bg-dark-400 text-white font-medium py-3 px-6 rounded-lg transition-all duration-200 min-h-[48px] touch-manipulation transform hover:scale-105 active:scale-95;
+    @apply relative overflow-hidden bg-dark-800/80 backdrop-blur-sm hover:bg-dark-700/80 active:bg-dark-600/80 border border-dark-600/50 hover:border-dark-500/50 text-white font-medium py-3 px-6 rounded-lg transition-all duration-300 min-h-[48px] touch-manipulation transform hover:scale-105 active:scale-95 shadow-card hover:shadow-card-hover;
   }
 
   .btn-action {
-    @apply font-semibold py-3 px-4 rounded-lg transition-all duration-200 min-h-[48px] md:min-h-[52px] touch-manipulation transform hover:scale-105 active:scale-95 text-sm md:text-base;
+    @apply relative overflow-hidden font-semibold py-3 px-4 rounded-lg transition-all duration-300 min-h-[48px] md:min-h-[52px] touch-manipulation transform hover:scale-105 active:scale-95 text-sm md:text-base shadow-card hover:shadow-card-hover;
   }
 
+  /* Modern glassmorphic input fields */
   .input-field {
-    @apply bg-dark-700 border border-dark-500 text-white rounded-lg px-4 py-3 text-lg focus:outline-none focus:ring-2 focus:ring-poker-green focus:border-transparent min-h-[48px] transition-all duration-200 focus:scale-105;
+    @apply bg-dark-800/60 backdrop-blur-sm border border-dark-600/50 text-white rounded-xl px-4 py-3 text-lg focus:outline-none focus:ring-2 focus:ring-poker-green-500/50 focus:border-poker-green-500/50 focus:bg-dark-800/80 min-h-[48px] transition-all duration-300 focus:scale-[1.02] shadow-inner-glow;
   }
 
+  /* Modern card design with glassmorphism */
   .card {
-    @apply bg-dark-800 rounded-xl p-4 md:p-6 shadow-lg border border-dark-600 transition-all duration-300 hover:shadow-xl;
+    @apply relative bg-dark-850/80 backdrop-blur-sm rounded-2xl p-4 md:p-6 shadow-card border border-dark-700/50 transition-all duration-300 hover:shadow-card-hover hover:border-dark-600/50 hover:bg-dark-850/90;
+  }
+
+  .card::before {
+    content: '';
+    @apply absolute inset-0 rounded-2xl bg-gradient-to-br from-white/5 to-transparent pointer-events-none;
   }
 
   .card-interactive {
-    @apply card cursor-pointer transform hover:scale-105 active:scale-95 transition-transform duration-200;
+    @apply card cursor-pointer transform hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 hover:shadow-card-hover;
   }
 
-  /* Chip animation effects */
+  /* Premium pot display */
+  .pot-display {
+    @apply relative bg-gradient-to-br from-dark-850/90 to-dark-900/90 backdrop-blur-lg border border-poker-gold-500/20 rounded-3xl p-8 shadow-glow-gold;
+  }
+
+  .pot-display::before {
+    content: '';
+    @apply absolute inset-0 rounded-3xl bg-gradient-to-br from-poker-gold-500/10 via-transparent to-poker-green-500/5 pointer-events-none;
+  }
+
+  /* Enhanced chip animation effects */
   .chip-transfer {
-    @apply transition-all duration-500 ease-in-out;
+    @apply transition-all duration-700 ease-out;
   }
 
   .chip-pulse {
-    animation: chipPulse 0.6s ease-in-out;
+    animation: chipPulse 0.8s ease-out;
   }
 
   .pot-grow {
-    animation: potGrow 0.8s ease-out;
+    animation: potGrow 1s ease-out;
   }
 
   .status-change {
-    animation: statusChange 0.4s ease-in-out;
+    animation: statusChange 0.6s ease-out;
+  }
+
+  /* Player status badges */
+  .status-badge-active {
+    @apply bg-gradient-to-r from-poker-green-500 to-poker-green-600 text-white shadow-glow;
+  }
+
+  .status-badge-allin {
+    @apply bg-gradient-to-r from-poker-gold-500 to-poker-gold-600 text-dark-900 shadow-glow-gold;
+  }
+
+  .status-badge-folded {
+    @apply bg-gradient-to-r from-poker-red-500 to-poker-red-600 text-white;
   }
 }
 
-/* Custom utility for poker gold color */
+/* Modern responsive text utilities */
 @layer utilities {
   .text-poker-gold {
-    color: #ffc107;
+    @apply text-poker-gold-500;
   }
 
-  .bg-poker-gold {
-    background-color: #ffc107;
+  .bg-poker-green {
+    @apply bg-poker-green-600;
   }
 
-  /* Responsive text sizes */
+  /* Enhanced responsive text sizes */
   .text-responsive-xs {
     @apply text-xs sm:text-sm;
   }
@@ -122,24 +162,28 @@
   }
 
   .text-responsive-3xl {
-    @apply text-3xl sm:text-4xl md:text-5xl;
+    @apply text-3xl sm:text-4xl md:text-5xl font-display;
   }
 
-  /* Animation utilities */
+  /* Modern animation utilities */
   .animate-fadeIn {
-    animation: fadeIn 0.3s ease-out;
+    animation: fadeIn 0.5s ease-out;
   }
 
   .animate-slideUp {
-    animation: slideUp 0.4s ease-out;
+    animation: slideUp 0.6s ease-out;
   }
 
   .animate-slideDown {
-    animation: slideDown 0.4s ease-out;
+    animation: slideDown 0.6s ease-out;
   }
 
   .animate-bounce-gentle {
-    animation: bounceGentle 0.6s ease-in-out;
+    animation: bounceGentle 1s ease-out;
+  }
+
+  .animate-float {
+    animation: float 3s ease-in-out infinite;
   }
 
   /* Custom hover scale utilities */
@@ -152,21 +196,23 @@
   }
 }
 
-/* Custom animations */
+/* Enhanced animations */
 @keyframes fadeIn {
   from {
     opacity: 0;
+    transform: translateY(10px);
   }
 
   to {
     opacity: 1;
+    transform: translateY(0);
   }
 }
 
 @keyframes slideUp {
   from {
     opacity: 0;
-    transform: translateY(20px);
+    transform: translateY(30px);
   }
 
   to {
@@ -196,7 +242,7 @@
 
   50% {
     transform: scale(1.1);
-    box-shadow: 0 0 20px rgba(255, 193, 7, 0.5);
+    box-shadow: 0 0 30px rgba(245, 158, 11, 0.6);
   }
 }
 
@@ -207,8 +253,8 @@
 
   50% {
     transform: scale(1.05);
-    color: #ffd700;
-    text-shadow: 0 0 10px rgba(255, 193, 7, 0.5);
+    color: #f59e0b;
+    text-shadow: 0 0 20px rgba(245, 158, 11, 0.5);
   }
 
   100% {
@@ -245,22 +291,22 @@
 
   40%,
   43% {
-    transform: translate3d(0, -8px, 0);
+    transform: translate3d(0, -12px, 0);
   }
 
   70% {
-    transform: translate3d(0, -4px, 0);
+    transform: translate3d(0, -6px, 0);
   }
 
   90% {
-    transform: translate3d(0, -2px, 0);
+    transform: translate3d(0, -3px, 0);
   }
 }
 
 /* Responsive design improvements */
 @media (max-width: 640px) {
   .card {
-    @apply p-3;
+    @apply p-4 rounded-xl;
   }
 
   .btn-primary {
@@ -274,7 +320,7 @@
 
 @media (min-width: 768px) {
   .card {
-    @apply p-6;
+    @apply p-6 rounded-2xl;
   }
 
   .btn-primary {
@@ -282,7 +328,7 @@
   }
 }
 
-/* Loading states */
+/* Enhanced loading states */
 .loading {
   position: relative;
   overflow: hidden;
@@ -296,7 +342,7 @@
   width: 100%;
   height: 100%;
   background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
-  animation: shimmer 1.5s infinite;
+  animation: shimmer 2s infinite;
 }
 
 @keyframes shimmer {
@@ -309,9 +355,9 @@
   }
 }
 
-/* Error states */
+/* Enhanced error states */
 .error-shake {
-  animation: shake 0.5s ease-in-out;
+  animation: shake 0.6s ease-in-out;
 }
 
 @keyframes shake {
@@ -322,28 +368,28 @@
   }
 
   25% {
-    transform: translateX(-5px);
+    transform: translateX(-8px);
   }
 
   75% {
-    transform: translateX(5px);
+    transform: translateX(8px);
   }
 }
 
-/* Success states */
+/* Enhanced success states */
 .success-glow {
-  box-shadow: 0 0 20px rgba(34, 197, 94, 0.3);
-  animation: successPulse 2s ease-in-out;
+  box-shadow: 0 0 30px rgba(34, 197, 94, 0.4);
+  animation: successPulse 3s ease-in-out infinite;
 }
 
 @keyframes successPulse {
 
   0%,
   100% {
-    box-shadow: 0 0 20px rgba(34, 197, 94, 0.3);
+    box-shadow: 0 0 30px rgba(34, 197, 94, 0.4);
   }
 
   50% {
-    box-shadow: 0 0 30px rgba(34, 197, 94, 0.5);
+    box-shadow: 0 0 40px rgba(34, 197, 94, 0.6);
   }
 }

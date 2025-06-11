@@ -34,6 +34,7 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
     );
     const [pot, setPot] = useState(0);
     const [currentBet, setCurrentBet] = useState(0);
+    const [currentRound, setCurrentRound] = useState(1);
     const [animatingChips, setAnimatingChips] = useState<string[]>([]);
 
     // Betting modal state
@@ -51,17 +52,42 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
         data?: any;
     }>({ isOpen: false, type: 'fold' });
 
-    // Save game state to localStorage
+    // Load saved game state including round
+    useEffect(() => {
+        const savedGameState = localStorage.getItem('currentGameState');
+        if (savedGameState) {
+            try {
+                const gameState = JSON.parse(savedGameState);
+                if (gameState.currentRound) {
+                    setCurrentRound(gameState.currentRound);
+                }
+                if (gameState.players) {
+                    setPlayers(gameState.players);
+                }
+                if (gameState.pot !== undefined) {
+                    setPot(gameState.pot);
+                }
+                if (gameState.currentBet !== undefined) {
+                    setCurrentBet(gameState.currentBet);
+                }
+            } catch (error) {
+                console.error('Error loading saved game state:', error);
+            }
+        }
+    }, []);
+
+    // Save game state to localStorage including round
     useEffect(() => {
         const gameState = {
             gameName,
             players,
             pot,
             currentBet,
+            currentRound,
             timestamp: Date.now()
         };
         localStorage.setItem('currentGameState', JSON.stringify(gameState));
-    }, [gameName, players, pot, currentBet]);
+    }, [gameName, players, pot, currentBet, currentRound]);
 
     const animateChipTransfer = (playerId: string) => {
         setAnimatingChips(prev => [...prev, playerId]);
@@ -229,6 +255,7 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
         })));
         setPot(0);
         setCurrentBet(0);
+        setCurrentRound(prev => prev + 1);
     };
 
     const handleBackToSetup = () => {
@@ -257,42 +284,78 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
     const totalChipsInPlay = players.reduce((sum, p) => sum + p.chips, 0) + pot;
 
     return (
-        <div className="min-h-screen bg-dark-900 flex flex-col">
+        <div className="min-h-screen bg-gradient-to-br from-dark-950 via-dark-900 to-dark-950">
             {/* Header */}
-            <div className="bg-dark-800 border-b border-dark-600 p-4">
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="bg-dark-850/90 backdrop-blur-lg border-b border-dark-700/50 p-4 shadow-lg">
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 max-w-4xl mx-auto">
                     <button
                         onClick={handleBackToSetup}
                         className="btn-secondary text-responsive-sm order-3 sm:order-1 w-full sm:w-auto"
                     >
                         ← Back to Setup
                     </button>
-                    <h1 className="text-responsive-xl font-bold text-white truncate order-1 sm:order-2">{gameName}</h1>
-                    <div className="text-gray-400 text-responsive-sm order-2 sm:order-3">
-                        {activePlayers}/{players.length} active
+                    <div className="text-center order-1 sm:order-2">
+                        <h1 className="text-responsive-xl font-bold text-white truncate mb-1">{gameName}</h1>
+                        <div className="flex items-center justify-center gap-4 text-responsive-sm">
+                            <div className="text-poker-gold font-medium">
+                                Live Game Session
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <div className="w-2 h-2 bg-accent-purple rounded-full animate-pulse"></div>
+                                <span className="text-accent-purple font-semibold">
+                                    Round {currentRound}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="text-center order-2 sm:order-3">
+                        <div className="text-gray-300 text-responsive-sm">
+                            {activePlayers}/{players.length} active
+                        </div>
+                        <div className="text-2xs text-gray-500">
+                            ${totalChipsInPlay.toLocaleString()} total
+                        </div>
                     </div>
                 </div>
             </div>
 
-            {/* Pot Display - Prominently Centered */}
-            <div className={`bg-gradient-to-b from-dark-800 to-dark-900 p-6 md:p-8 text-center border-b border-dark-600 ${pot > 0 ? 'pot-grow' : ''}`}>
-                <div className="mb-3">
-                    <span className="text-gray-400 text-responsive-sm uppercase tracking-wide font-medium">Current Pot</span>
-                </div>
-                <div className="text-responsive-3xl font-bold text-poker-gold mb-3">
-                    ${pot.toLocaleString()}
+            {/* Premium Pot Display with Round Info */}
+            <div className={`pot-display mx-4 mt-6 text-center ${pot > 0 ? 'pot-grow animate-pulse-glow' : ''}`}>
+                <div className="flex items-center justify-center gap-6 mb-4">
+                    <div className="text-center">
+                        <span className="text-gray-400 text-responsive-xs uppercase tracking-wider font-medium block">Round</span>
+                        <div className="text-responsive-lg font-bold text-accent-purple mt-1">
+                            #{currentRound}
+                        </div>
+                    </div>
+                    <div className="w-px h-12 bg-gradient-to-b from-transparent via-dark-600 to-transparent"></div>
+                    <div className="text-center flex-1">
+                        <span className="text-gray-400 text-responsive-sm uppercase tracking-wider font-medium block">Current Pot</span>
+                        <div className="text-responsive-3xl font-bold text-poker-gold mt-1 animate-float">
+                            ${pot.toLocaleString()}
+                        </div>
+                    </div>
+                    <div className="w-px h-12 bg-gradient-to-b from-transparent via-dark-600 to-transparent"></div>
+                    <div className="text-center">
+                        <span className="text-gray-400 text-responsive-xs uppercase tracking-wider font-medium block">Players</span>
+                        <div className="text-responsive-lg font-bold text-gray-300 mt-1">
+                            {activePlayers}
+                        </div>
+                    </div>
                 </div>
                 {currentBet > 0 && (
-                    <div className="text-gray-300 text-responsive-base">
-                        Current bet: ${currentBet.toLocaleString()}
+                    <div className="flex items-center justify-center gap-2 text-gray-300 text-responsive-base">
+                        <div className="w-2 h-2 bg-accent-blue rounded-full animate-pulse"></div>
+                        <span>Current bet: ${currentBet.toLocaleString()}</span>
+                        <div className="w-2 h-2 bg-accent-blue rounded-full animate-pulse"></div>
                     </div>
                 )}
             </div>
 
             {/* Scrollable Players List */}
-            <div className="flex-1 overflow-y-auto p-4 pb-24">
-                <div className="space-y-3">
-                    {players.map((player) => {
+            <div className="flex-1 overflow-y-auto p-4 pb-32">
+                <div className="max-w-4xl mx-auto space-y-4">
+                    {players.map((player, index) => {
                         const isAnimating = animatingChips.includes(player.id);
                         const callAmount = currentBet - player.currentBet;
                         const canCall = callAmount > 0 && player.chips >= callAmount;
@@ -300,32 +363,42 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
                         const canRaise = player.chips > callAmount;
 
                         return (
-                            <div key={player.id} className={`card-interactive ${player.status === 'folded' ? 'opacity-60' : ''
-                                } ${isAnimating ? 'chip-pulse' : ''}`}>
+                            <div
+                                key={player.id}
+                                className={`card-interactive ${player.status === 'folded' ? 'opacity-60' : ''
+                                    } ${isAnimating ? 'chip-pulse' : ''}`}
+                                style={{ animationDelay: `${index * 0.1}s` }}
+                            >
                                 {/* Player Info */}
-                                <div className="flex flex-col sm:flex-row justify-between items-start gap-4 mb-4">
+                                <div className="flex flex-col lg:flex-row justify-between items-start gap-4 mb-6">
                                     <div className="flex-1 min-w-0">
-                                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-2">
-                                            <h3 className="text-responsive-lg font-bold text-white truncate">{player.name}</h3>
-                                            <div className={`inline-flex px-3 py-1 rounded-full text-responsive-xs font-medium ${player.status === 'active' ? 'bg-green-600 text-white' :
-                                                player.status === 'all-in' ? 'bg-yellow-600 text-black' :
-                                                    'bg-red-600 text-white'
+                                        <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-3">
+                                            <h3 className="text-responsive-lg font-bold text-white truncate">
+                                                {player.name}
+                                            </h3>
+                                            <div className={`inline-flex px-3 py-1.5 rounded-full text-responsive-xs font-semibold ${player.status === 'active' ? 'status-badge-active' :
+                                                player.status === 'all-in' ? 'status-badge-allin' :
+                                                    'status-badge-folded'
                                                 } ${player.status !== 'folded' ? 'status-change' : ''}`}>
                                                 {getPlayerStatusText(player.status)}
                                             </div>
                                         </div>
-                                        <div className="flex flex-col sm:flex-row gap-1 sm:gap-4 text-responsive-sm">
-                                            <span className="text-gray-300">
-                                                Chips: <span className={`font-medium ${isAnimating ? 'text-poker-gold' : 'text-white'}`}>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-responsive-sm">
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-3 h-3 bg-accent-emerald rounded-full"></div>
+                                                <span className="text-gray-300">Chips:</span>
+                                                <span className={`font-semibold ${isAnimating ? 'text-poker-gold animate-pulse' : 'text-white'}`}>
                                                     ${player.chips.toLocaleString()}
                                                 </span>
-                                            </span>
+                                            </div>
                                             {player.currentBet > 0 && (
-                                                <span className="text-gray-300">
-                                                    Bet: <span className="text-poker-gold font-medium">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-3 h-3 bg-poker-gold-500 rounded-full"></div>
+                                                    <span className="text-gray-300">Bet:</span>
+                                                    <span className="text-poker-gold font-semibold">
                                                         ${player.currentBet.toLocaleString()}
                                                     </span>
-                                                </span>
+                                                </div>
                                             )}
                                         </div>
                                     </div>
@@ -333,48 +406,62 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
 
                                 {/* Action Buttons */}
                                 {player.status === 'active' && player.chips > 0 && (
-                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                                         <button
                                             onClick={() => handleFold(player.id)}
-                                            className="btn-action bg-red-600 hover:bg-red-700 active:bg-red-800 text-white"
+                                            className="btn-action bg-gradient-to-r from-poker-red-500 to-poker-red-600 hover:from-poker-red-400 hover:to-poker-red-500 text-white border border-poker-red-400/30"
                                         >
-                                            Fold
+                                            <span className="flex items-center justify-center gap-2">
+                                                <span>🃏</span>
+                                                <span>Fold</span>
+                                            </span>
                                         </button>
 
                                         <button
                                             onClick={() => handleCall(player.id)}
                                             disabled={!canCall && !canCheck}
-                                            className="btn-action bg-blue-600 hover:bg-blue-700 active:bg-blue-800 disabled:bg-gray-600 disabled:cursor-not-allowed text-white"
+                                            className="btn-action bg-gradient-to-r from-accent-blue to-blue-600 hover:from-blue-400 hover:to-blue-500 disabled:from-gray-600 disabled:to-gray-700 disabled:cursor-not-allowed text-white border border-blue-400/30 disabled:border-gray-600/30"
                                         >
-                                            {canCheck ? 'Check' :
-                                                callAmount >= player.chips ? '🚨 All-In' :
-                                                    `Call $${callAmount.toLocaleString()}`}
+                                            <span className="flex items-center justify-center gap-2">
+                                                <span>{canCheck ? '✋' : callAmount >= player.chips ? '🚨' : '💰'}</span>
+                                                <span>
+                                                    {canCheck ? 'Check' :
+                                                        callAmount >= player.chips ? 'All-In' :
+                                                            `Call $${callAmount.toLocaleString()}`}
+                                                </span>
+                                            </span>
                                         </button>
 
                                         <button
                                             onClick={() => handleOpenBettingModal(player.id)}
                                             disabled={!canRaise && callAmount >= player.chips}
-                                            className="btn-action bg-poker-green hover:bg-green-600 active:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white"
+                                            className="btn-action bg-gradient-to-r from-poker-green-500 to-poker-green-600 hover:from-poker-green-400 hover:to-poker-green-500 disabled:from-gray-600 disabled:to-gray-700 disabled:cursor-not-allowed text-white border border-poker-green-400/30 disabled:border-gray-600/30"
                                         >
-                                            {canRaise ? 'Raise' : 'All-In'}
+                                            <span className="flex items-center justify-center gap-2">
+                                                <span>{canRaise ? '📈' : '🎯'}</span>
+                                                <span>{canRaise ? 'Raise' : 'All-In'}</span>
+                                            </span>
                                         </button>
                                     </div>
                                 )}
 
                                 {/* Status Indicators */}
                                 {player.status === 'all-in' && (
-                                    <div className="text-center py-3 mt-4">
-                                        <span className="bg-yellow-600 text-yellow-100 px-4 py-2 rounded-full font-bold uppercase tracking-wide text-responsive-xs">
-                                            🟡 ALL IN
-                                        </span>
+                                    <div className="text-center py-4 mt-4">
+                                        <div className="inline-flex items-center gap-2 bg-gradient-to-r from-poker-gold-500 to-poker-gold-600 text-dark-900 px-6 py-3 rounded-full font-bold uppercase tracking-wider text-responsive-sm shadow-glow-gold">
+                                            <span>🎯</span>
+                                            <span>ALL IN</span>
+                                            <span>🎯</span>
+                                        </div>
                                     </div>
                                 )}
 
                                 {player.status === 'folded' && (
-                                    <div className="text-center py-3 mt-4">
-                                        <span className="bg-red-600 text-red-100 px-4 py-2 rounded-full font-bold uppercase tracking-wide text-responsive-xs">
-                                            🔴 FOLDED
-                                        </span>
+                                    <div className="text-center py-4 mt-4">
+                                        <div className="inline-flex items-center gap-2 bg-gradient-to-r from-gray-600 to-gray-700 text-white px-6 py-3 rounded-full font-bold uppercase tracking-wider text-responsive-sm">
+                                            <span>🃏</span>
+                                            <span>FOLDED</span>
+                                        </div>
                                     </div>
                                 )}
                             </div>
@@ -383,18 +470,26 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
                 </div>
             </div>
 
-            {/* Bottom Section */}
-            <div className="bg-dark-800 border-t border-dark-600 p-4">
-                <button
-                    onClick={handleEndHand}
-                    className={`btn-primary w-full ${pot > 0 ? 'animate-bounce-gentle' : ''}`}
-                    disabled={pot === 0 && players.every(p => p.currentBet === 0)}
-                >
-                    {pot > 0 ? '🏆 End Hand & Distribute Pot' : '🃏 New Hand'}
-                </button>
-
-                <div className="text-center text-gray-400 text-responsive-xs mt-3">
-                    Total chips in play: ${totalChipsInPlay.toLocaleString()}
+            {/* Fixed Bottom Action Panel */}
+            <div className="fixed bottom-0 left-0 right-0 bg-dark-850/95 backdrop-blur-lg border-t border-dark-700/50 p-4 shadow-2xl">
+                <div className="max-w-4xl mx-auto">
+                    <button
+                        onClick={handleEndHand}
+                        className={`btn-primary w-full ${pot > 0 ? 'animate-bounce-gentle success-glow' : ''}`}
+                        disabled={pot === 0 && players.every(p => p.currentBet === 0)}
+                    >
+                        <span className="flex items-center justify-center gap-3">
+                            <span className="text-xl">
+                                {pot > 0 ? '🏆' : '🃏'}
+                            </span>
+                            <span>
+                                {pot > 0 ? `End Round ${currentRound} & Distribute Pot` : `Start Round ${currentRound + 1}`}
+                            </span>
+                            <span className="text-xl">
+                                {pot > 0 ? '🏆' : '🃏'}
+                            </span>
+                        </span>
+                    </button>
                 </div>
             </div>
 
@@ -444,8 +539,8 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
             <ConfirmationDialog
                 isOpen={confirmDialog.isOpen && confirmDialog.type === 'new-hand'}
                 title="⚠️ Pot Not Distributed"
-                message={`There's $${confirmDialog.data?.potAmount?.toLocaleString()} in the pot. Starting a new hand will reset all bets. Distribute the pot first?`}
-                confirmText="Start New Hand Anyway"
+                message={`There's $${confirmDialog.data?.potAmount?.toLocaleString()} in the pot. Starting round ${currentRound + 1} will reset all bets. Distribute the pot first?`}
+                confirmText={`Start Round ${currentRound + 1} Anyway`}
                 cancelText="Distribute Pot First"
                 confirmVariant="warning"
                 onConfirm={confirmNewHand}
@@ -458,7 +553,7 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
             <ConfirmationDialog
                 isOpen={confirmDialog.isOpen && confirmDialog.type === 'back-to-setup'}
                 title="Return to Game Setup"
-                message="Are you sure you want to go back to setup? The current game will be saved and you can resume it later."
+                message={`Are you sure you want to go back to setup? Round ${currentRound} progress will be saved and you can resume it later.`}
                 confirmText="Yes, Back to Setup"
                 cancelText="Stay in Game"
                 confirmVariant="warning"
