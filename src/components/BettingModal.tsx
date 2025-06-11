@@ -34,8 +34,11 @@ const BettingModal: React.FC<BettingModalProps> = ({
     useEffect(() => {
         if (isOpen) {
             const defaultBet = Math.min(minBet, maxBet);
-            setBetAmount(defaultBet);
-            setCustomInput(defaultBet.toString());
+            // Round to nearest multiple of 10
+            const roundedBet = Math.round(defaultBet / 10) * 10;
+            const finalBet = Math.max(Math.ceil(minBet / 10) * 10, Math.min(roundedBet, Math.floor(maxBet / 10) * 10));
+            setBetAmount(finalBet);
+            setCustomInput(finalBet.toString());
             setError('');
             setIsValidating(false);
         }
@@ -73,24 +76,7 @@ const BettingModal: React.FC<BettingModalProps> = ({
         setBetAmount(amount);
     }, [customInput, minBet, maxBet]);
 
-    const handleNumberInput = (num: string) => {
-        if (num === 'clear') {
-            setCustomInput('');
-            return;
-        }
-        if (num === 'backspace') {
-            setCustomInput(prev => prev.slice(0, -1));
-            return;
-        }
 
-        // Prevent entering too many digits
-        if (customInput.length >= 8) {
-            setError('Bet amount too large');
-            return;
-        }
-
-        setCustomInput(prev => prev + num);
-    };
 
     const handleQuickBet = (amount: number) => {
         const validAmount = Math.max(minBet, Math.min(maxBet, amount));
@@ -171,8 +157,47 @@ const BettingModal: React.FC<BettingModalProps> = ({
                     )}
                 </div>
 
+                {/* Bet Amount Slider */}
+                <div className="p-4 border-b border-dark-600">
+                    <div className="text-gray-400 text-responsive-sm mb-3 flex items-center gap-2">
+                        <span>🎚️</span>
+                        <span>Bet Amount Slider (multiples of $10)</span>
+                    </div>
+                    <div className="relative mb-4">
+                        <input
+                            type="range"
+                            min={Math.ceil(minBet / 10) * 10}
+                            max={Math.floor(maxBet / 10) * 10}
+                            step={10}
+                            value={Math.round(betAmount / 10) * 10}
+                            onChange={(e) => {
+                                const amount = parseInt(e.target.value);
+                                setBetAmount(amount);
+                                setCustomInput(amount.toString());
+                                setError('');
+                            }}
+                            className="w-full h-3 bg-dark-600 rounded-lg appearance-none cursor-pointer slider"
+                            style={{
+                                background: `linear-gradient(to right, 
+                                    #10b981 0%, 
+                                    #10b981 ${((Math.round(betAmount / 10) * 10 - Math.ceil(minBet / 10) * 10) / (Math.floor(maxBet / 10) * 10 - Math.ceil(minBet / 10) * 10)) * 100}%, 
+                                    #374151 ${((Math.round(betAmount / 10) * 10 - Math.ceil(minBet / 10) * 10) / (Math.floor(maxBet / 10) * 10 - Math.ceil(minBet / 10) * 10)) * 100}%, 
+                                    #374151 100%)`
+                            }}
+                        />
+                        <div className="flex justify-between text-xs text-gray-400 mt-1">
+                            <span>${(Math.ceil(minBet / 10) * 10).toLocaleString()}</span>
+                            <span>${(Math.floor(maxBet / 10) * 10).toLocaleString()}</span>
+                        </div>
+                        <div className="text-center text-xs text-green-400 mt-2">
+                            Move slider to adjust bet in $10 increments
+                        </div>
+                    </div>
+                </div>
+
                 {/* Custom Input */}
                 <div className="p-4 border-b border-dark-600">
+                    <div className="text-gray-400 text-responsive-sm mb-3">Or Enter Exact Amount</div>
                     <input
                         type="number"
                         value={customInput}
@@ -190,57 +215,33 @@ const BettingModal: React.FC<BettingModalProps> = ({
                     )}
                 </div>
 
-                {/* Number Pad */}
-                <div className="p-4 border-b border-dark-600">
-                    <div className="grid grid-cols-3 gap-2 mb-3">
-                        {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
-                            <button
-                                key={num}
-                                onClick={() => handleNumberInput(num.toString())}
-                                className="bg-dark-600 hover:bg-dark-500 active:bg-dark-400 text-white font-medium py-3 rounded-lg transition-all duration-200 text-responsive-lg min-h-[48px] transform hover:scale-105 active:scale-95"
-                            >
-                                {num}
-                            </button>
-                        ))}
-                    </div>
-                    <div className="grid grid-cols-3 gap-2">
-                        <button
-                            onClick={() => handleNumberInput('clear')}
-                            className="bg-red-600 hover:bg-red-700 active:bg-red-800 text-white font-medium py-3 rounded-lg transition-all duration-200 min-h-[48px] transform hover:scale-105 active:scale-95"
-                        >
-                            Clear
-                        </button>
-                        <button
-                            onClick={() => handleNumberInput('0')}
-                            className="bg-dark-600 hover:bg-dark-500 active:bg-dark-400 text-white font-medium py-3 rounded-lg transition-all duration-200 text-responsive-lg min-h-[48px] transform hover:scale-105 active:scale-95"
-                        >
-                            0
-                        </button>
-                        <button
-                            onClick={() => handleNumberInput('backspace')}
-                            className="bg-orange-600 hover:bg-orange-700 active:bg-orange-800 text-white font-medium py-3 rounded-lg transition-all duration-200 min-h-[48px] transform hover:scale-105 active:scale-95"
-                        >
-                            ⌫
-                        </button>
-                    </div>
-                </div>
+
 
                 {/* Quick Bet Buttons */}
                 {quickBetOptions.length > 0 && (
                     <div className="p-4 border-b border-dark-600">
-                        <div className="text-gray-400 text-responsive-sm mb-3">Quick Bets</div>
-                        <div className="grid grid-cols-2 gap-2">
+                        <div className="text-gray-400 text-responsive-sm mb-3 flex items-center gap-2">
+                            <span>⚡</span>
+                            <span>Quick Bet Options</span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
                             {quickBetOptions.map((option, index) => (
                                 <button
                                     key={index}
                                     onClick={() => handleQuickBet(option.amount)}
-                                    className={`btn-action ${option.amount === maxBet
-                                        ? 'bg-yellow-600 hover:bg-yellow-700 active:bg-yellow-800'
-                                        : 'bg-poker-green hover:bg-green-600 active:bg-green-700'
-                                        } text-white`}
+                                    className={`relative overflow-hidden transition-all duration-200 p-3 rounded-xl font-semibold transform hover:scale-105 active:scale-95 ${option.amount === maxBet
+                                        ? 'bg-gradient-to-r from-yellow-600 to-yellow-700 hover:from-yellow-500 hover:to-yellow-600 text-white shadow-glow-gold'
+                                        : 'bg-gradient-to-r from-poker-green-500 to-poker-green-600 hover:from-poker-green-400 hover:to-poker-green-500 text-white shadow-glow'
+                                        } ${betAmount === option.amount ? 'ring-2 ring-white ring-opacity-60' : ''}`}
                                 >
-                                    <div className="font-semibold">{option.label}</div>
-                                    <div className="text-xs opacity-80">${option.amount.toLocaleString()}</div>
+                                    <div className="relative z-10">
+                                        <div className="text-sm font-bold">{option.label}</div>
+                                        <div className="text-xs opacity-90">${option.amount.toLocaleString()}</div>
+                                    </div>
+                                    {/* Selected indicator */}
+                                    {betAmount === option.amount && (
+                                        <div className="absolute top-1 right-1 w-3 h-3 bg-white rounded-full opacity-80 animate-pulse"></div>
+                                    )}
                                 </button>
                             ))}
                         </div>
