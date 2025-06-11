@@ -30,6 +30,32 @@ const BettingModal: React.FC<BettingModalProps> = ({
     const maxBet = playerChips;
     const callAmount = currentBet - playerCurrentBet;
 
+    // Unified function to update all input methods simultaneously
+    const updateBetAmount = (newAmount: number, source: 'slider' | 'input' | 'quick-bet' = 'input') => {
+        // Validate the amount
+        if (isNaN(newAmount) || newAmount < 0) {
+            if (source === 'input') {
+                setError('Please enter a valid number');
+            }
+            return;
+        }
+
+        // Update the central bet amount
+        setBetAmount(newAmount);
+
+        // Update the text input to match
+        setCustomInput(newAmount.toString());
+
+        // Validate and set error messages
+        if (newAmount < minBet && newAmount > 0) {
+            setError(`Minimum bet is $${minBet.toLocaleString()}`);
+        } else if (newAmount > maxBet) {
+            setError(`Maximum bet is $${maxBet.toLocaleString()} (all your chips)`);
+        } else {
+            setError('');
+        }
+    };
+
     // Reset modal when opened
     useEffect(() => {
         if (isOpen) {
@@ -37,52 +63,36 @@ const BettingModal: React.FC<BettingModalProps> = ({
             // Round to nearest multiple of 10
             const roundedBet = Math.round(defaultBet / 10) * 10;
             const finalBet = Math.max(Math.ceil(minBet / 10) * 10, Math.min(roundedBet, Math.floor(maxBet / 10) * 10));
-            setBetAmount(finalBet);
-            setCustomInput(finalBet.toString());
-            setError('');
+            updateBetAmount(finalBet, 'quick-bet');
             setIsValidating(false);
         }
     }, [isOpen, minBet, maxBet]);
 
-    // Validate and update betAmount when custom input changes
-    useEffect(() => {
-        if (!customInput.trim()) {
+    // Handle slider changes
+    const handleSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const amount = parseInt(e.target.value);
+        updateBetAmount(amount, 'slider');
+    };
+
+    // Handle text input changes
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const inputValue = e.target.value;
+        setCustomInput(inputValue);
+
+        if (!inputValue.trim()) {
             setBetAmount(0);
             setError('');
             return;
         }
 
-        const amount = parseInt(customInput);
+        const amount = parseInt(inputValue);
+        updateBetAmount(amount, 'input');
+    };
 
-        if (isNaN(amount)) {
-            setError('Please enter a valid number');
-            setBetAmount(0);
-            return;
-        }
-
-        if (amount < minBet) {
-            setError(`Minimum bet is $${minBet.toLocaleString()}`);
-            setBetAmount(amount);
-            return;
-        }
-
-        if (amount > maxBet) {
-            setError(`Maximum bet is $${maxBet.toLocaleString()} (all your chips)`);
-            setBetAmount(amount);
-            return;
-        }
-
-        setError('');
-        setBetAmount(amount);
-    }, [customInput, minBet, maxBet]);
-
-
-
+    // Handle quick bet button clicks
     const handleQuickBet = (amount: number) => {
         const validAmount = Math.max(minBet, Math.min(maxBet, amount));
-        setBetAmount(validAmount);
-        setCustomInput(validAmount.toString());
-        setError('');
+        updateBetAmount(validAmount, 'quick-bet');
     };
 
     const handleConfirm = async () => {
@@ -136,7 +146,7 @@ const BettingModal: React.FC<BettingModalProps> = ({
                     </div>
                 </div>
 
-                {/* Bet Amount Display */}
+                {/* Bet Amount Display - The Source of Truth */}
                 <div className={`p-4 md:p-6 text-center border-b border-dark-600 ${isAllIn ? 'bg-yellow-900 bg-opacity-20' : ''}`}>
                     <div className="text-gray-400 text-responsive-sm mb-2">
                         {isAllIn ? '🚨 ALL-IN BET' : 'Bet Amount'}
@@ -170,12 +180,7 @@ const BettingModal: React.FC<BettingModalProps> = ({
                             max={Math.floor(maxBet / 10) * 10}
                             step={10}
                             value={Math.round(betAmount / 10) * 10}
-                            onChange={(e) => {
-                                const amount = parseInt(e.target.value);
-                                setBetAmount(amount);
-                                setCustomInput(amount.toString());
-                                setError('');
-                            }}
+                            onChange={handleSliderChange}
                             className="w-full h-3 bg-dark-600 rounded-lg appearance-none cursor-pointer slider"
                             style={{
                                 background: `linear-gradient(to right, 
@@ -201,7 +206,7 @@ const BettingModal: React.FC<BettingModalProps> = ({
                     <input
                         type="number"
                         value={customInput}
-                        onChange={(e) => setCustomInput(e.target.value)}
+                        onChange={handleInputChange}
                         placeholder="Enter amount"
                         className={`input-field w-full text-center text-responsive-xl ${error ? 'border-red-500 ring-red-500' : ''
                             }`}
@@ -214,8 +219,6 @@ const BettingModal: React.FC<BettingModalProps> = ({
                         </div>
                     )}
                 </div>
-
-
 
                 {/* Quick Bet Buttons */}
                 {quickBetOptions.length > 0 && (
