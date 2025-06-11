@@ -1,0 +1,294 @@
+import React, { useState, useEffect } from 'react';
+import BettingModal from './BettingModal';
+
+interface Player {
+    id: string;
+    name: string;
+    chips: number;
+    status: 'active' | 'folded' | 'all-in';
+    currentBet: number;
+}
+
+interface GameInterfaceProps {
+    gameName: string;
+    initialPlayers: { id: string; name: string }[];
+    startingChips: number;
+    onBackToSetup: () => void;
+}
+
+const GameInterface: React.FC<GameInterfaceProps> = ({
+    gameName,
+    initialPlayers,
+    startingChips,
+    onBackToSetup
+}) => {
+    const [players, setPlayers] = useState<Player[]>(
+        initialPlayers.map(p => ({
+            ...p,
+            chips: startingChips,
+            status: 'active' as const,
+            currentBet: 0
+        }))
+    );
+    const [pot, setPot] = useState(0);
+    const [currentBet, setCurrentBet] = useState(0);
+
+    // Betting modal state
+    const [bettingModalOpen, setBettingModalOpen] = useState(false);
+    const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
+
+    // Save game state to localStorage
+    useEffect(() => {
+        const gameState = {
+            gameName,
+            players,
+            pot,
+            currentBet,
+            timestamp: Date.now()
+        };
+        localStorage.setItem('currentGameState', JSON.stringify(gameState));
+    }, [gameName, players, pot, currentBet]);
+
+    const handleFold = (playerId: string) => {
+        setPlayers(prev => prev.map(player =>
+            player.id === playerId
+                ? { ...player, status: 'folded' as const }
+                : player
+        ));
+    };
+
+    const handleCall = (playerId: string) => {
+        setPlayers(prev => prev.map(player => {
+            if (player.id === playerId) {
+                const callAmount = Math.min(currentBet - player.currentBet, player.chips);
+                const newChips = player.chips - callAmount;
+                const newCurrentBet = player.currentBet + callAmount;
+
+                setPot(prevPot => prevPot + callAmount);
+
+                return {
+                    ...player,
+                    chips: newChips,
+                    currentBet: newCurrentBet,
+                    status: newChips === 0 ? 'all-in' as const : player.status
+                };
+            }
+            return player;
+        }));
+    };
+
+
+
+    const handleOpenBettingModal = (playerId: string) => {
+        const player = players.find(p => p.id === playerId);
+        if (player) {
+            setSelectedPlayer(player);
+            setBettingModalOpen(true);
+        }
+    };
+
+    const handleConfirmBet = (betAmount: number) => {
+        if (!selectedPlayer) return;
+
+        setPlayers(prev => prev.map(player => {
+            if (player.id === selectedPlayer.id) {
+                const actualBet = Math.min(betAmount, player.chips);
+                const newChips = player.chips - actualBet;
+                const newCurrentBet = player.currentBet + actualBet;
+
+                setPot(prevPot => prevPot + actualBet);
+
+                // Update the current bet if this player raised
+                if (newCurrentBet > currentBet) {
+                    setCurrentBet(newCurrentBet);
+                }
+
+                return {
+                    ...player,
+                    chips: newChips,
+                    currentBet: newCurrentBet,
+                    status: newChips === 0 ? 'all-in' as const : player.status
+                };
+            }
+            return player;
+        }));
+
+        setBettingModalOpen(false);
+        setSelectedPlayer(null);
+    };
+
+    const handleCancelBet = () => {
+        setBettingModalOpen(false);
+        setSelectedPlayer(null);
+    };
+
+    const handleNewHand = () => {
+        setPlayers(prev => prev.map(player => ({
+            ...player,
+            status: player.chips > 0 ? 'active' as const : 'folded' as const,
+            currentBet: 0
+        })));
+        setPot(0);
+        setCurrentBet(0);
+    };
+
+    const getPlayerStatusColor = (status: Player['status']) => {
+        switch (status) {
+            case 'active': return 'text-green-400';
+            case 'folded': return 'text-red-400';
+            case 'all-in': return 'text-yellow-400';
+            default: return 'text-gray-400';
+        }
+    };
+
+    const getPlayerStatusText = (status: Player['status']) => {
+        switch (status) {
+            case 'active': return 'Active';
+            case 'folded': return 'Folded';
+            case 'all-in': return 'All-In';
+            default: return 'Active';
+        }
+    };
+
+    const activePlayers = players.filter(p => p.status === 'active').length;
+    const totalChipsInPlay = players.reduce((sum, p) => sum + p.chips, 0) + pot;
+
+    return (
+        <div className="min-h-screen bg-dark-900 flex flex-col">
+            {/* Header */}
+            <div className="bg-dark-800 border-b border-dark-600 p-4">
+                <div className="flex items-center justify-between mb-2">
+                    <button
+                        onClick={onBackToSetup}
+                        className="text-gray-400 hover:text-white transition-colors"
+                        aria-label="Back to setup"
+                    >
+                        ← Back
+                    </button>
+                    <h1 className="text-lg font-semibold text-white truncate mx-4">{gameName}</h1>
+                    <div className="text-gray-400 text-sm">
+                        {activePlayers}/{players.length} active
+                    </div>
+                </div>
+            </div>
+
+            {/* Pot Display */}
+            <div className="bg-gradient-to-b from-dark-800 to-dark-900 p-6 text-center border-b border-dark-600">
+                <div className="mb-2">
+                    <span className="text-gray-400 text-sm uppercase tracking-wide">Current Pot</span>
+                </div>
+                <div className="text-4xl font-bold text-poker-gold mb-2">
+                    ${pot.toLocaleString()}
+                </div>
+                {currentBet > 0 && (
+                    <div className="text-gray-300 text-sm">
+                        Current bet: ${currentBet.toLocaleString()}
+                    </div>
+                )}
+            </div>
+
+            {/* Players List */}
+            <div className="flex-1 overflow-y-auto p-4 pb-24">
+                <div className="space-y-3">
+                    {players.map((player) => (
+                        <div key={player.id} className="card">
+                            {/* Player Info */}
+                            <div className="flex items-center justify-between mb-4">
+                                <div className="flex-1">
+                                    <div className="flex items-center gap-3">
+                                        <h3 className="text-white font-semibold text-lg">{player.name}</h3>
+                                        <span className={`text-sm font-medium ${getPlayerStatusColor(player.status)}`}>
+                                            {getPlayerStatusText(player.status)}
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center gap-4 mt-1">
+                                        <span className="text-gray-300">
+                                            ${player.chips.toLocaleString()} chips
+                                        </span>
+                                        {player.currentBet > 0 && (
+                                            <span className="text-poker-gold text-sm">
+                                                Bet: ${player.currentBet.toLocaleString()}
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+                                <div className="text-right">
+                                    <div className={`w-3 h-3 rounded-full ${player.status === 'active' ? 'bg-green-400' :
+                                        player.status === 'folded' ? 'bg-red-400' : 'bg-yellow-400'
+                                        }`}></div>
+                                </div>
+                            </div>
+
+                            {/* Action Buttons */}
+                            {player.status === 'active' && player.chips > 0 && (
+                                <div className="grid grid-cols-3 gap-2">
+                                    <button
+                                        onClick={() => handleFold(player.id)}
+                                        className="bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-3 rounded-lg transition-colors duration-200 text-sm"
+                                    >
+                                        Fold
+                                    </button>
+
+                                    <button
+                                        onClick={() => handleCall(player.id)}
+                                        disabled={currentBet <= player.currentBet}
+                                        className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-medium py-2 px-3 rounded-lg transition-colors duration-200 text-sm"
+                                    >
+                                        {currentBet === player.currentBet ? 'Check' : `Call $${(currentBet - player.currentBet).toLocaleString()}`}
+                                    </button>
+
+                                    <button
+                                        onClick={() => handleOpenBettingModal(player.id)}
+                                        disabled={player.chips <= (currentBet - player.currentBet)}
+                                        className="bg-poker-green hover:bg-green-600 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-medium py-2 px-3 rounded-lg transition-colors duration-200 text-sm"
+                                    >
+                                        Raise
+                                    </button>
+                                </div>
+                            )}
+
+                            {/* All-in indicator */}
+                            {player.status === 'all-in' && (
+                                <div className="text-center py-2">
+                                    <span className="bg-yellow-600 text-yellow-100 px-3 py-1 rounded-full text-sm font-medium">
+                                        ALL IN
+                                    </span>
+                                </div>
+                            )}
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            {/* Bottom Controls */}
+            <div className="bg-dark-800 border-t border-dark-600 p-4 space-y-3">
+                {/* New Hand Button */}
+                <button
+                    onClick={handleNewHand}
+                    className="btn-primary w-full"
+                >
+                    🃏 New Hand
+                </button>
+
+                {/* Game Stats */}
+                <div className="text-center text-gray-400 text-xs">
+                    Total chips in play: ${totalChipsInPlay.toLocaleString()}
+                </div>
+            </div>
+
+            {/* Betting Modal */}
+            <BettingModal
+                isOpen={bettingModalOpen}
+                playerName={selectedPlayer?.name || ''}
+                playerChips={selectedPlayer?.chips || 0}
+                currentBet={currentBet}
+                playerCurrentBet={selectedPlayer?.currentBet || 0}
+                potSize={pot}
+                onConfirm={handleConfirmBet}
+                onCancel={handleCancelBet}
+            />
+        </div>
+    );
+};
+
+export default GameInterface; 
