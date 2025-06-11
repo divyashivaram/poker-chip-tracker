@@ -224,14 +224,9 @@ const BettingModal: React.FC<BettingModalProps> = ({
                     </div>
 
                     {/* Slider Range Labels */}
-                    <div className="flex justify-between text-xs text-gray-400 mb-2">
+                    <div className="flex justify-between text-xs text-gray-400">
                         <span>${(Math.ceil(minBet / 10) * 10).toLocaleString()}</span>
                         <span>${(Math.floor(maxBet / 10) * 10).toLocaleString()}</span>
-                    </div>
-
-                    {/* Helper Text */}
-                    <div className="text-center text-xs text-gray-500">
-                        Drag slider or enter exact amount
                     </div>
 
                     {/* Error Message */}
