@@ -64,7 +64,6 @@ const GameSetup: React.FC<GameSetupProps> = ({ onStartGame }) => {
     };
 
     const handleStartGame = () => {
-        alert('Button clicked!'); // Simple test to see if click works
         console.log('🚀 Start Game button clicked');
         const filledPlayers = players.filter(player => player.name.trim());
         console.log('👥 Filled players:', filledPlayers);
@@ -101,8 +100,8 @@ const GameSetup: React.FC<GameSetupProps> = ({ onStartGame }) => {
         <div className="min-h-screen bg-dark-900 p-4">
             <div className="max-w-md mx-auto pt-8">
                 <div className="text-center mb-8">
-                    <h1 className="text-3xl font-bold text-white mb-2">🃏 Poker Chip Tracker</h1>
-                    <p className="text-gray-400">Set up your game</p>
+                    <h1 className="text-3xl font-bold text-white mb-2">�� Poker Chip Tracker v2.0</h1>
+                    <p className="text-gray-400">Set up your game - UPDATED VERSION</p>
                 </div>
 
                 <div className="card space-y-6">
