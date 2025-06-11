@@ -30,6 +30,11 @@ const BettingModal: React.FC<BettingModalProps> = ({
     const maxBet = playerChips;
     const callAmount = currentBet - playerCurrentBet;
 
+    // Determine if this is a bet or raise situation
+    const isBetting = callAmount === 0;
+    const modalTitle = isBetting ? 'Bet Amount' : 'Raise Amount';
+    const actionButtonText = isBetting ? 'Bet' : 'Raise';
+
     // Unified function to update all input methods simultaneously
     const updateBetAmount = useCallback((newAmount: number, source: 'slider' | 'input' | 'quick-bet' = 'input') => {
         // Validate the amount
@@ -48,13 +53,13 @@ const BettingModal: React.FC<BettingModalProps> = ({
 
         // Validate and set error messages
         if (newAmount < minBet && newAmount > 0) {
-            setError(`Minimum bet is $${minBet.toLocaleString()}`);
+            setError(`Minimum ${isBetting ? 'bet' : 'raise'} is $${minBet.toLocaleString()}`);
         } else if (newAmount > maxBet) {
             setError(`Maximum bet is $${maxBet.toLocaleString()} (all your chips)`);
         } else {
             setError('');
         }
-    }, [minBet, maxBet]);
+    }, [minBet, maxBet, isBetting]);
 
     // Reset modal when opened
     useEffect(() => {
@@ -66,7 +71,7 @@ const BettingModal: React.FC<BettingModalProps> = ({
             updateBetAmount(finalBet, 'quick-bet');
             setIsValidating(false);
         }
-    }, [isOpen, updateBetAmount]);
+    }, [isOpen, updateBetAmount, minBet, maxBet]);
 
     // Handle slider changes
     const handleSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -111,7 +116,7 @@ const BettingModal: React.FC<BettingModalProps> = ({
     };
 
     const quickBetOptions = [
-        { label: 'Min Raise', amount: minBet },
+        { label: isBetting ? 'Min Bet' : 'Min Raise', amount: minBet },
         { label: '1/4 Pot', amount: Math.floor(potSize * 0.25) + callAmount },
         { label: '1/2 Pot', amount: Math.floor(potSize * 0.5) + callAmount },
         { label: 'Pot Size', amount: potSize + callAmount },
@@ -137,7 +142,9 @@ const BettingModal: React.FC<BettingModalProps> = ({
                         </div>
                         <div className="flex justify-between">
                             <span>To call:</span>
-                            <span className="text-poker-gold font-medium">${callAmount.toLocaleString()}</span>
+                            <span className={`font-medium ${callAmount > 0 ? 'text-poker-gold' : 'text-gray-400'}`}>
+                                ${callAmount.toLocaleString()}
+                            </span>
                         </div>
                         <div className="flex justify-between">
                             <span>Current pot:</span>
@@ -146,10 +153,10 @@ const BettingModal: React.FC<BettingModalProps> = ({
                     </div>
                 </div>
 
-                {/* Bet Amount Display - The Source of Truth */}
+                {/* Dynamic Bet/Raise Amount Display - The Source of Truth */}
                 <div className={`p-4 md:p-6 text-center border-b border-dark-600 ${isAllIn ? 'bg-yellow-900 bg-opacity-20' : ''}`}>
                     <div className="text-gray-400 text-responsive-sm mb-2">
-                        {isAllIn ? '🚨 ALL-IN BET' : 'Bet Amount'}
+                        {isAllIn ? '🚨 ALL-IN BET' : modalTitle}
                     </div>
                     <div className={`text-responsive-3xl font-bold mb-2 transition-all duration-300 ${error ? 'text-red-400 error-shake' :
                         isAllIn ? 'text-yellow-400' :
@@ -165,13 +172,18 @@ const BettingModal: React.FC<BettingModalProps> = ({
                             ⚠️ This will bet all your remaining chips!
                         </div>
                     )}
+                    {!isBetting && callAmount > 0 && (
+                        <div className="text-poker-gold text-responsive-sm font-medium mt-2">
+                            💡 You need to call ${callAmount.toLocaleString()} to stay in the hand
+                        </div>
+                    )}
                 </div>
 
                 {/* Combined Slider and Input Control */}
                 <div className="p-4 border-b border-dark-600">
                     <div className="text-gray-400 text-responsive-sm mb-3 flex items-center gap-2">
                         <span>🎚️</span>
-                        <span>Adjust Bet Amount</span>
+                        <span>Adjust {isBetting ? 'Bet' : 'Raise'} Amount</span>
                     </div>
 
                     {/* Slider and Input Container */}
@@ -235,7 +247,7 @@ const BettingModal: React.FC<BettingModalProps> = ({
                     <div className="p-4 border-b border-dark-600">
                         <div className="text-gray-400 text-responsive-sm mb-3 flex items-center gap-2">
                             <span>⚡</span>
-                            <span>Quick Bet Options</span>
+                            <span>Quick {isBetting ? 'Bet' : 'Raise'} Options</span>
                         </div>
                         <div className="grid grid-cols-2 gap-3">
                             {quickBetOptions.map((option, index) => (
@@ -279,7 +291,7 @@ const BettingModal: React.FC<BettingModalProps> = ({
                             } disabled:cursor-not-allowed text-white ${isValid && !isValidating ? 'transform hover:scale-105 active:scale-95' : ''
                             } ${isValidating ? 'loading' : ''}`}
                     >
-                        {isValidating ? 'Processing...' : isAllIn ? '🚨 GO ALL-IN' : 'Raise'}
+                        {isValidating ? 'Processing...' : isAllIn ? '🚨 GO ALL-IN' : actionButtonText}
                     </button>
                 </div>
             </div>
