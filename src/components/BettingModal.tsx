@@ -245,25 +245,34 @@ const BettingModal: React.FC<BettingModalProps> = ({
                             <span>Quick {isBetting ? 'Bet' : 'Raise'} Options</span>
                         </div>
                         <div className="grid grid-cols-2 gap-3">
-                            {quickBetOptions.map((option, index) => (
-                                <button
-                                    key={index}
-                                    onClick={() => handleQuickBet(option.amount)}
-                                    className={`relative overflow-hidden transition-all duration-200 p-3 rounded-xl font-semibold transform hover:scale-105 active:scale-95 ${option.amount === maxBet
-                                        ? 'bg-gradient-to-r from-yellow-600 to-yellow-700 hover:from-yellow-500 hover:to-yellow-600 text-white shadow-glow-gold'
-                                        : 'bg-gradient-to-r from-poker-green-500 to-poker-green-600 hover:from-poker-green-400 hover:to-poker-green-500 text-white shadow-glow'
-                                        } ${betAmount === option.amount ? 'ring-2 ring-white ring-opacity-60' : ''}`}
-                                >
-                                    <div className="relative z-10">
-                                        <div className="text-sm font-bold">{option.label}</div>
-                                        <div className="text-xs opacity-90">${option.amount.toLocaleString()}</div>
-                                    </div>
-                                    {/* Selected indicator */}
-                                    {betAmount === option.amount && (
-                                        <div className="absolute top-1 right-1 w-3 h-3 bg-white rounded-full opacity-80 animate-pulse"></div>
-                                    )}
-                                </button>
-                            ))}
+                            {quickBetOptions.map((option, index) => {
+                                const isSelected = betAmount === option.amount;
+                                const isAllIn = option.amount === maxBet;
+
+                                return (
+                                    <button
+                                        key={index}
+                                        onClick={() => handleQuickBet(option.amount)}
+                                        className={`relative overflow-hidden transition-all duration-200 p-3 rounded-xl font-semibold transform hover:scale-105 active:scale-95 border-2 ${isSelected
+                                                ? isAllIn
+                                                    ? 'bg-gradient-to-r from-yellow-600 to-yellow-700 border-yellow-600 text-white shadow-glow-gold'
+                                                    : 'bg-gradient-to-r from-poker-green-500 to-poker-green-600 border-poker-green-500 text-white shadow-glow'
+                                                : isAllIn
+                                                    ? 'border-yellow-500 text-yellow-400 bg-transparent hover:bg-yellow-900/20 hover:border-yellow-400'
+                                                    : 'border-poker-green-500 text-poker-green-400 bg-transparent hover:bg-poker-green-900/20 hover:border-poker-green-400'
+                                            }`}
+                                    >
+                                        <div className="relative z-10">
+                                            <div className="text-sm font-bold">{option.label}</div>
+                                            <div className="text-xs opacity-90">${option.amount.toLocaleString()}</div>
+                                        </div>
+                                        {/* Selected indicator */}
+                                        {isSelected && (
+                                            <div className="absolute top-1 right-1 w-3 h-3 bg-white rounded-full opacity-80 animate-pulse"></div>
+                                        )}
+                                    </button>
+                                );
+                            })}
                         </div>
                     </div>
                 )}
