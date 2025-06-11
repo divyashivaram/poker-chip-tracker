@@ -190,12 +190,10 @@ const GameSetup: React.FC<GameSetupProps> = ({ onStartGame }) => {
                     {/* Compact Game Name */}
                     <div className="card animate-fadeIn">
                         <div className="flex items-center gap-3 mb-4">
-                            <div className="w-8 h-8 bg-gradient-to-r from-accent-blue to-blue-600 rounded-full flex items-center justify-center shadow-glow">
-                                <span className="text-lg">🎮</span>
-                            </div>
+
                             <div>
                                 <h2 className="text-lg font-bold text-white">Game Name</h2>
-                                <p className="text-gray-400 text-xs">Give your poker session a memorable name</p>
+
                             </div>
                         </div>
                         <input
@@ -211,7 +209,7 @@ const GameSetup: React.FC<GameSetupProps> = ({ onStartGame }) => {
                                     });
                                 }
                             }}
-                            placeholder="Enter game name (e.g., Friday Night Poker)"
+                            placeholder="(e.g., Friday Night Poker)"
                             className={`input-field w-full ${errors.gameName ? 'border-red-500 ring-red-500 error-shake' : ''}`}
                             maxLength={50}
                         />
@@ -225,28 +223,14 @@ const GameSetup: React.FC<GameSetupProps> = ({ onStartGame }) => {
 
                     {/* Compact Players */}
                     <div className="card animate-fadeIn" style={{ animationDelay: '0.2s' }}>
-                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
-                            <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 bg-gradient-to-r from-accent-purple to-purple-600 rounded-full flex items-center justify-center shadow-glow">
-                                    <span className="text-lg">👥</span>
-                                </div>
-                                <div>
-                                    <h2 className="text-lg font-bold text-white">
-                                        Players ({players.length})
-                                    </h2>
-                                    <p className="text-gray-400 text-xs">Add players to your game</p>
-                                </div>
+                        <div className="flex items-center gap-3 mb-4">
+
+                            <div>
+                                <h2 className="text-lg font-bold text-white">
+                                    Players
+                                </h2>
+
                             </div>
-                            <button
-                                onClick={addPlayer}
-                                disabled={players.length >= 10}
-                                className="btn-secondary bg-gradient-to-r from-poker-green-600/20 to-poker-green-700/20 border-poker-green-500/40 hover:border-poker-green-400/60 hover:bg-poker-green-600/30 flex items-center gap-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed px-4 py-2 font-semibold"
-                            >
-                                <div className="w-4 h-4 bg-poker-green-500 rounded-full flex items-center justify-center">
-                                    <span className="text-white text-xs font-bold">+</span>
-                                </div>
-                                <span>Add Player</span>
-                            </button>
                         </div>
 
                         <div className="space-y-3">
@@ -266,7 +250,7 @@ const GameSetup: React.FC<GameSetupProps> = ({ onStartGame }) => {
                                                 type="text"
                                                 value={player.name}
                                                 onChange={(e) => updatePlayer(player.id, e.target.value)}
-                                                placeholder={`Player ${index + 1} name`}
+                                                placeholder={`Player ${index + 1}`}
                                                 className={`input-field w-full pl-12 ${errors[`player_${player.id}`] ? 'border-red-500 ring-red-500' : ''}`}
                                                 maxLength={30}
                                             />
@@ -292,10 +276,23 @@ const GameSetup: React.FC<GameSetupProps> = ({ onStartGame }) => {
                             ))}
                         </div>
 
+                        {/* Add Player button below inputs */}
+                        {players.length < 10 && (
+                            <div className="mt-4 flex justify-start">
+                                <button
+                                    onClick={addPlayer}
+                                    className="text-gray-400 hover:text-white text-sm font-medium transition-colors duration-200 flex items-center gap-2 px-0 py-2"
+                                >
+                                    <span className="text-xs">+</span>
+                                    <span>Add more</span>
+                                </button>
+                            </div>
+                        )}
+
                         <div className="mt-4 pt-3 border-t border-dark-700/50">
                             <div className="flex items-center gap-2 text-xs text-gray-400">
                                 <span>💡</span>
-                                <span>Minimum 2 players, maximum 10 players</span>
+                                <span>Minimum 2, maximum 10 players</span>
                             </div>
                         </div>
 
@@ -314,8 +311,8 @@ const GameSetup: React.FC<GameSetupProps> = ({ onStartGame }) => {
                                 <span className="text-lg">🃏</span>
                             </div>
                             <div>
-                                <h2 className="text-lg font-bold text-white">Starting Chips</h2>
-                                <p className="text-gray-400 text-xs">Set the initial chip amount for each player</p>
+                                <h2 className="text-lg font-bold text-white">Initial chip amount for each player</h2>
+
                             </div>
                         </div>
 
@@ -345,9 +342,7 @@ const GameSetup: React.FC<GameSetupProps> = ({ onStartGame }) => {
 
                         {/* Quick-fill preset buttons */}
                         <div className="mb-4">
-                            <div className="text-gray-400 text-xs mb-3 text-center">
-                                <span>⚡</span> Quick-fill presets
-                            </div>
+
                             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                                 {[500, 1000, 2000, 5000].map(amount => (
                                     <button
@@ -446,9 +441,8 @@ const GameSetup: React.FC<GameSetupProps> = ({ onStartGame }) => {
                                 </span>
                             ) : (
                                 <span className="flex items-center justify-center gap-3">
-                                    <span className="text-xl">🚀</span>
                                     <span className="font-bold">Start Game</span>
-                                    <span className="text-xl">🚀</span>
+
                                 </span>
                             )}
                         </button>
