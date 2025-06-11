@@ -5,6 +5,15 @@ interface Player {
     name: string;
 }
 
+interface SavedGame {
+    gameName: string;
+    players: { id: string; name: string }[];
+    startingChips: number;
+    timestamp: number;
+    currentHand?: number;
+    currentRound?: string;
+}
+
 interface GameSetupProps {
     onStartGame: (gameName: string, players: Player[], startingChips: number) => void;
 }
@@ -19,6 +28,8 @@ const GameSetup: React.FC<GameSetupProps> = ({ onStartGame }) => {
     const [errors, setErrors] = useState<{ [key: string]: string }>({});
     const [isLoading, setIsLoading] = useState(false);
     const [animatingNewPlayer, setAnimatingNewPlayer] = useState<string | null>(null);
+    const [showSavedGames, setShowSavedGames] = useState(false);
+    const [savedGames, setSavedGames] = useState<SavedGame[]>([]);
 
     // Load saved game state
     useEffect(() => {
@@ -33,6 +44,7 @@ const GameSetup: React.FC<GameSetupProps> = ({ onStartGame }) => {
                 console.error('Error loading saved state:', error);
             }
         }
+        loadSavedGames();
     }, []);
 
     // Auto-save setup state
@@ -44,6 +56,58 @@ const GameSetup: React.FC<GameSetupProps> = ({ onStartGame }) => {
         };
         localStorage.setItem('gameSetupState', JSON.stringify(saveState));
     }, [gameName, players, startingChips]);
+
+    const loadSavedGames = () => {
+        try {
+            const currentGame = localStorage.getItem('currentGameState');
+            const games: SavedGame[] = [];
+
+            if (currentGame) {
+                const parsed = JSON.parse(currentGame);
+                const hoursSinceLastGame = (Date.now() - parsed.timestamp) / (1000 * 60 * 60);
+
+                // Only show games saved within 7 days
+                if (hoursSinceLastGame < 168) {
+                    games.push(parsed);
+                }
+            }
+
+            setSavedGames(games);
+        } catch (error) {
+            console.error('Error loading saved games:', error);
+            setSavedGames([]);
+        }
+    };
+
+    const handleResumeGame = (game: SavedGame) => {
+        // Load the game data and start it
+        onStartGame(game.gameName, game.players, game.startingChips);
+        setShowSavedGames(false);
+    };
+
+    const handleDeleteGame = (gameToDelete: SavedGame) => {
+        if (window.confirm(`Delete "${gameToDelete.gameName}"? This action cannot be undone.`)) {
+            // For now, we only have one saved game (currentGameState)
+            localStorage.removeItem('currentGameState');
+            loadSavedGames();
+        }
+    };
+
+    const formatGameAge = (timestamp: number) => {
+        const now = Date.now();
+        const diff = now - timestamp;
+        const minutes = Math.floor(diff / (1000 * 60));
+        const hours = Math.floor(diff / (1000 * 60 * 60));
+        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+
+        if (minutes < 60) {
+            return `${minutes}m ago`;
+        } else if (hours < 24) {
+            return `${hours}h ago`;
+        } else {
+            return `${days}d ago`;
+        }
+    };
 
     const addPlayer = () => {
         if (players.length < 10) {
@@ -167,7 +231,6 @@ const GameSetup: React.FC<GameSetupProps> = ({ onStartGame }) => {
     return (
         <div className="min-h-screen bg-gradient-to-br from-dark-950 via-dark-900 to-dark-950 p-4">
             <div className="max-w-2xl mx-auto">
-                {/* Compact Header */}
                 <div className="text-center mb-8 animate-slideDown">
                     <div className="inline-flex items-center gap-4 mb-4">
                         <div className="text-4xl animate-float">♠️</div>
@@ -184,7 +247,120 @@ const GameSetup: React.FC<GameSetupProps> = ({ onStartGame }) => {
                     <p className="text-gray-400 text-sm md:text-base max-w-md mx-auto">
                         Focus on the cards, we'll handle the chips
                     </p>
+
+                    {/* View Saved Games Button */}
+                    {savedGames.length > 0 && (
+                        <div className="mt-6">
+                            <button
+                                onClick={() => setShowSavedGames(true)}
+                                className="text-gray-400 hover:text-white text-sm font-medium transition-colors duration-200 flex items-center gap-2 px-4 py-2 rounded-lg border border-dark-600/50 hover:border-poker-green-500/40 bg-dark-800/30 hover:bg-dark-750/50 mx-auto"
+                            >
+                                <span className="text-xs">📁</span>
+                                <span>View Saved Games ({savedGames.length})</span>
+                            </button>
+                        </div>
+                    )}
                 </div>
+
+                {/* Saved Games Modal */}
+                {showSavedGames && (
+                    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+                        <div className="bg-dark-850/95 backdrop-blur-lg border border-dark-600/50 rounded-xl p-6 max-w-md w-full mx-auto shadow-2xl animate-slideUp">
+                            <div className="flex items-center justify-between mb-6">
+                                <div className="flex items-center gap-3">
+                                    <span className="text-2xl">📁</span>
+                                    <h3 className="text-lg font-bold text-white">Saved Games</h3>
+                                </div>
+                                <button
+                                    onClick={() => setShowSavedGames(false)}
+                                    className="text-gray-400 hover:text-white transition-colors duration-200 p-1"
+                                >
+                                    <span className="text-xl">×</span>
+                                </button>
+                            </div>
+
+                            {savedGames.length === 0 ? (
+                                <div className="text-center py-8">
+                                    <div className="text-4xl mb-4">🎮</div>
+                                    <p className="text-gray-400 text-sm">No saved games found</p>
+                                    <p className="text-gray-500 text-xs mt-2">Games are automatically saved during play</p>
+                                </div>
+                            ) : (
+                                <div className="space-y-3">
+                                    {savedGames.map((game, index) => (
+                                        <div
+                                            key={index}
+                                            className="bg-dark-800/60 border border-dark-600/50 rounded-lg p-4 hover:border-poker-green-500/40 transition-colors duration-200"
+                                        >
+                                            <div className="flex items-start justify-between mb-3">
+                                                <div className="flex-1 min-w-0">
+                                                    <h4 className="font-semibold text-white truncate mb-1">
+                                                        {game.gameName}
+                                                    </h4>
+                                                    <div className="text-xs text-gray-400 space-y-1">
+                                                        <div className="flex items-center gap-2">
+                                                            <span>👥</span>
+                                                            <span>{game.players.length} players</span>
+                                                        </div>
+                                                        {game.currentHand && (
+                                                            <div className="flex items-center gap-2">
+                                                                <span>🃏</span>
+                                                                <span>Hand #{game.currentHand}</span>
+                                                                {game.currentRound && (
+                                                                    <span className="text-poker-gold">({game.currentRound})</span>
+                                                                )}
+                                                            </div>
+                                                        )}
+                                                        <div className="flex items-center gap-2">
+                                                            <span>⏰</span>
+                                                            <span>{formatGameAge(game.timestamp)}</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <button
+                                                    onClick={() => handleDeleteGame(game)}
+                                                    className="text-gray-500 hover:text-red-400 transition-colors duration-200 p-1 ml-2"
+                                                    title="Delete saved game"
+                                                >
+                                                    <span className="text-sm">🗑️</span>
+                                                </button>
+                                            </div>
+
+                                            <div className="flex gap-2">
+                                                <button
+                                                    onClick={() => handleResumeGame(game)}
+                                                    className="flex-1 bg-gradient-to-r from-poker-green-500 to-poker-green-600 hover:from-poker-green-400 hover:to-poker-green-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 transform hover:scale-105 active:scale-100"
+                                                >
+                                                    🔄 Resume
+                                                </button>
+                                                <button
+                                                    onClick={() => {
+                                                        setGameName(game.gameName);
+                                                        setPlayers(game.players);
+                                                        setStartingChips(game.startingChips);
+                                                        setShowSavedGames(false);
+                                                    }}
+                                                    className="bg-dark-700/80 hover:bg-dark-650/80 text-gray-300 hover:text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 border border-dark-600/50 hover:border-dark-500/50"
+                                                >
+                                                    📋 Copy Setup
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+
+                            <div className="mt-6 pt-4 border-t border-dark-700/50">
+                                <button
+                                    onClick={() => setShowSavedGames(false)}
+                                    className="w-full bg-dark-700/80 hover:bg-dark-650/80 text-gray-300 hover:text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 border border-dark-600/50 hover:border-dark-500/50"
+                                >
+                                    Close
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 <div className="space-y-6">
                     {/* Compact Game Name */}

@@ -16,6 +16,7 @@ interface GameInterfaceProps {
     initialPlayers: { id: string; name: string }[];
     startingChips: number;
     onBackToSetup: () => void;
+    showToast: (message: string, type?: 'success' | 'error' | 'info' | 'warning') => void;
 }
 
 type BettingRound = 'pre-flop' | 'flop' | 'turn' | 'river';
@@ -24,7 +25,8 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
     gameName,
     initialPlayers,
     startingChips,
-    onBackToSetup
+    onBackToSetup,
+    showToast
 }) => {
     const [players, setPlayers] = useState<Player[]>(
         initialPlayers.map(p => ({
@@ -50,7 +52,7 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
     // Confirmation dialog state
     const [confirmDialog, setConfirmDialog] = useState<{
         isOpen: boolean;
-        type: 'all-in' | 'fold' | 'new-hand' | 'next-round' | 'back-to-setup';
+        type: 'all-in' | 'fold' | 'new-hand' | 'next-round';
         playerId?: string;
         data?: any;
     }>({ isOpen: false, type: 'fold' });
@@ -61,23 +63,42 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
         if (savedGameState) {
             try {
                 const gameState = JSON.parse(savedGameState);
-                if (gameState.currentHand) {
+                if (gameState.currentHand && typeof gameState.currentHand === 'number') {
                     setCurrentHand(gameState.currentHand);
                 }
                 if (gameState.currentRound) {
                     setCurrentRound(gameState.currentRound);
                 }
-                if (gameState.players) {
-                    setPlayers(gameState.players);
+                if (gameState.players && Array.isArray(gameState.players)) {
+                    // Ensure all player properties have valid default values
+                    const validatedPlayers = gameState.players.map((player: any) => ({
+                        id: player.id || '',
+                        name: player.name || '',
+                        chips: typeof player.chips === 'number' ? player.chips : startingChips,
+                        status: player.status || 'active',
+                        currentBet: typeof player.currentBet === 'number' ? player.currentBet : 0
+                    }));
+                    setPlayers(validatedPlayers);
                 }
-                if (gameState.pot !== undefined) {
+                if (gameState.pot !== undefined && typeof gameState.pot === 'number') {
                     setPot(gameState.pot);
                 }
-                if (gameState.currentBet !== undefined) {
+                if (gameState.currentBet !== undefined && typeof gameState.currentBet === 'number') {
                     setCurrentBet(gameState.currentBet);
                 }
             } catch (error) {
                 console.error('Error loading saved game state:', error);
+                // Reset to initial state if loading fails
+                setPlayers(initialPlayers.map(p => ({
+                    ...p,
+                    chips: startingChips,
+                    status: 'active' as const,
+                    currentBet: 0
+                })));
+                setPot(0);
+                setCurrentBet(0);
+                setCurrentHand(1);
+                setCurrentRound('pre-flop');
             }
         }
     }, []);
@@ -303,16 +324,8 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
     };
 
     const handleBackToSetup = () => {
-        setConfirmDialog({
-            isOpen: true,
-            type: 'back-to-setup',
-            data: {}
-        });
-    };
-
-    const confirmBackToSetup = () => {
+        showToast('Game progress saved', 'success');
         onBackToSetup();
-        setConfirmDialog({ isOpen: false, type: 'back-to-setup' });
     };
 
     const getPlayerStatusText = (status: Player['status']) => {
@@ -355,7 +368,7 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
     };
 
     const activePlayers = players.filter(p => p.status === 'active').length;
-    const totalChipsInPlay = players.reduce((sum, p) => sum + p.chips, 0) + pot;
+    const totalChipsInPlay = players.reduce((sum, p) => sum + (p.chips || 0), 0) + (pot || 0);
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-dark-950 via-dark-900 to-dark-950">
@@ -414,7 +427,7 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
                     <div className="text-center flex-1">
                         <span className="text-gray-400 text-responsive-sm uppercase tracking-wider font-medium block">Current Pot</span>
                         <div className="text-responsive-3xl font-bold text-poker-gold mt-1 animate-float">
-                            ${pot.toLocaleString()}
+                            ${(pot || 0).toLocaleString()}
                         </div>
                     </div>
                     <div className="w-px h-12 bg-gradient-to-b from-transparent via-dark-600 to-transparent"></div>
@@ -428,7 +441,7 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
                 {currentBet > 0 && (
                     <div className="flex items-center justify-center gap-2 text-gray-300 text-responsive-base">
                         <div className="w-2 h-2 bg-accent-blue rounded-full animate-pulse"></div>
-                        <span>Current bet: ${currentBet.toLocaleString()}</span>
+                        <span>Current bet: ${(currentBet || 0).toLocaleString()}</span>
                         <div className="w-2 h-2 bg-accent-blue rounded-full animate-pulse"></div>
                     </div>
                 )}
@@ -439,10 +452,10 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
                 <div className="max-w-4xl mx-auto space-y-4">
                     {players.map((player, index) => {
                         const isAnimating = animatingChips.includes(player.id);
-                        const callAmount = currentBet - player.currentBet;
-                        const canCall = callAmount > 0 && player.chips >= callAmount;
+                        const callAmount = (currentBet || 0) - (player.currentBet || 0);
+                        const canCall = callAmount > 0 && (player.chips || 0) >= callAmount;
                         const canCheck = callAmount === 0;
-                        const canRaise = player.chips > callAmount;
+                        const canRaise = (player.chips || 0) > callAmount;
 
                         return (
                             <div
@@ -470,15 +483,15 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
                                                 <div className="w-3 h-3 bg-accent-emerald rounded-full"></div>
                                                 <span className="text-gray-300">Chips:</span>
                                                 <span className={`font-semibold ${isAnimating ? 'text-poker-gold animate-pulse' : 'text-white'}`}>
-                                                    ${player.chips.toLocaleString()}
+                                                    ${(player.chips || 0).toLocaleString()}
                                                 </span>
                                             </div>
-                                            {player.currentBet > 0 && (
+                                            {(player.currentBet || 0) > 0 && (
                                                 <div className="flex items-center gap-2">
                                                     <div className="w-3 h-3 bg-poker-gold-500 rounded-full"></div>
                                                     <span className="text-gray-300">Bet:</span>
                                                     <span className="text-poker-gold font-semibold">
-                                                        ${player.currentBet.toLocaleString()}
+                                                        ${(player.currentBet || 0).toLocaleString()}
                                                     </span>
                                                 </div>
                                             )}
@@ -487,7 +500,7 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
                                 </div>
 
                                 {/* Action Buttons */}
-                                {player.status === 'active' && player.chips > 0 && (
+                                {player.status === 'active' && (player.chips || 0) > 0 && (
                                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                                         <button
                                             onClick={() => handleFold(player.id)}
@@ -505,18 +518,18 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
                                             className="btn-action bg-gradient-to-r from-accent-blue to-blue-600 hover:from-blue-400 hover:to-blue-500 disabled:from-gray-600 disabled:to-gray-700 disabled:cursor-not-allowed text-white border border-blue-400/30 disabled:border-gray-600/30"
                                         >
                                             <span className="flex items-center justify-center gap-2">
-                                                <span>{canCheck ? '✋' : callAmount >= player.chips ? '🚨' : '💰'}</span>
+                                                <span>{canCheck ? '✋' : callAmount >= (player.chips || 0) ? '🚨' : '💰'}</span>
                                                 <span>
                                                     {canCheck ? 'Check' :
-                                                        callAmount >= player.chips ? 'All-In' :
-                                                            `Call $${callAmount.toLocaleString()}`}
+                                                        callAmount >= (player.chips || 0) ? 'All-In' :
+                                                            `Call $${(callAmount || 0).toLocaleString()}`}
                                                 </span>
                                             </span>
                                         </button>
 
                                         <button
                                             onClick={() => handleOpenBettingModal(player.id)}
-                                            disabled={!canRaise && callAmount >= player.chips}
+                                            disabled={!canRaise && callAmount >= (player.chips || 0)}
                                             className="btn-action bg-gradient-to-r from-poker-green-500 to-poker-green-600 hover:from-poker-green-400 hover:to-poker-green-500 disabled:from-gray-600 disabled:to-gray-700 disabled:cursor-not-allowed text-white border border-poker-green-400/30 disabled:border-gray-600/30"
                                         >
                                             <span className="flex items-center justify-center gap-2">
@@ -610,11 +623,11 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
             <ConfirmationDialog
                 isOpen={confirmDialog.isOpen && confirmDialog.type === 'all-in'}
                 title="⚠️ All-In Confirmation"
-                message={`${confirmDialog.data?.playerName} is going ALL-IN with $${confirmDialog.data?.amount?.toLocaleString()}! This will use all remaining chips.`}
+                message={`${confirmDialog.data?.playerName} is going ALL-IN with $${(confirmDialog.data?.amount || 0).toLocaleString()}! This will use all remaining chips.`}
                 confirmText="🚨 Confirm All-In"
                 cancelText="Cancel"
                 confirmVariant="warning"
-                onConfirm={() => confirmAllIn(confirmDialog.playerId!, confirmDialog.data?.amount)}
+                onConfirm={() => confirmAllIn(confirmDialog.playerId!, confirmDialog.data?.amount || 0)}
                 onCancel={() => setConfirmDialog({ isOpen: false, type: 'all-in' })}
             />
 
@@ -632,7 +645,7 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
             <ConfirmationDialog
                 isOpen={confirmDialog.isOpen && confirmDialog.type === 'new-hand'}
                 title="⚠️ Pot Not Distributed"
-                message={`There's $${confirmDialog.data?.potAmount?.toLocaleString()} in the pot. Starting hand ${currentHand + 1} will reset everything. Distribute the pot first?`}
+                message={`There's $${(confirmDialog.data?.potAmount || 0).toLocaleString()} in the pot. Starting hand ${currentHand + 1} will reset everything. Distribute the pot first?`}
                 confirmText={`Start Hand ${currentHand + 1} Anyway`}
                 cancelText="Distribute Pot First"
                 confirmVariant="warning"
@@ -641,17 +654,6 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
                     setConfirmDialog({ isOpen: false, type: 'new-hand' });
                     setPotDistributionOpen(true);
                 }}
-            />
-
-            <ConfirmationDialog
-                isOpen={confirmDialog.isOpen && confirmDialog.type === 'back-to-setup'}
-                title="Return to Game Setup"
-                message={`Are you sure you want to go back to setup? Hand ${currentHand} (${getRoundDisplayName(currentRound)}) progress will be saved and you can resume it later.`}
-                confirmText="Yes, Back to Setup"
-                cancelText="Stay in Game"
-                confirmVariant="warning"
-                onConfirm={confirmBackToSetup}
-                onCancel={() => setConfirmDialog({ isOpen: false, type: 'back-to-setup' })}
             />
         </div>
     );

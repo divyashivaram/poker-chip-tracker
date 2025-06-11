@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import GameSetup from './components/GameSetup';
 import GameInterface from './components/GameInterface';
+import Toast from './components/Toast';
 
 interface Player {
   id: string;
@@ -14,11 +15,18 @@ interface GameState {
   timestamp: number;
 }
 
+interface ToastState {
+  message: string;
+  type?: 'success' | 'error' | 'info' | 'warning';
+  isVisible: boolean;
+}
+
 function App() {
   const [currentView, setCurrentView] = useState<'setup' | 'game'>('setup');
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showResumeOption, setShowResumeOption] = useState(false);
+  const [toast, setToast] = useState<ToastState>({ message: '', isVisible: false });
 
   // Initialize the app and check for saved games
   useEffect(() => {
@@ -84,6 +92,14 @@ function App() {
     setShowResumeOption(false);
     localStorage.removeItem('currentGameState');
     // Stay on setup view
+  };
+
+  const showToast = (message: string, type: 'success' | 'error' | 'info' | 'warning' = 'success') => {
+    setToast({ message, type, isVisible: true });
+  };
+
+  const hideToast = () => {
+    setToast(prev => ({ ...prev, isVisible: false }));
   };
 
   // Premium loading screen
@@ -215,8 +231,16 @@ function App() {
             initialPlayers={gameState.players}
             startingChips={gameState.startingChips}
             onBackToSetup={handleBackToSetup}
+            showToast={showToast}
           />
         )
+      )}
+      {toast.isVisible && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={hideToast}
+        />
       )}
     </div>
   );
