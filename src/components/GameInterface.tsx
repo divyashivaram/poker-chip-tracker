@@ -44,6 +44,7 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
 
     // Turn management state
     const [currentPlayerIndex, setCurrentPlayerIndex] = useState(0);
+    const [playersWhoHaveActed, setPlayersWhoHaveActed] = useState<Set<string>>(new Set());
 
     // Betting modal state
     const [bettingModalOpen, setBettingModalOpen] = useState(false);
@@ -103,6 +104,9 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
                 if (gameState.currentPlayerIndex !== undefined && typeof gameState.currentPlayerIndex === 'number') {
                     setCurrentPlayerIndex(gameState.currentPlayerIndex);
                 }
+                if (gameState.playersWhoHaveActed && Array.isArray(gameState.playersWhoHaveActed)) {
+                    setPlayersWhoHaveActed(new Set(gameState.playersWhoHaveActed));
+                }
                 if (gameState.players && Array.isArray(gameState.players) && gameState.players.length > 0) {
                     // Use saved players with their actual game state
                     const validatedPlayers = gameState.players.map((player: any) => {
@@ -144,6 +148,7 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
                 setCurrentHand(1);
                 setCurrentRound('pre-flop');
                 setCurrentPlayerIndex(0);
+                setPlayersWhoHaveActed(new Set());
             }
         } else {
             // No saved state, initialize with starting values
@@ -166,6 +171,7 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
             currentHand,
             currentRound,
             currentPlayerIndex,
+            playersWhoHaveActed: Array.from(playersWhoHaveActed),
             timestamp: Date.now()
         };
         localStorage.setItem('currentGameState', JSON.stringify(gameState));
@@ -196,6 +202,8 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
         ));
         animateChipTransfer(playerId);
         setConfirmDialog({ isOpen: false, type: 'fold' });
+        // Mark player as having acted
+        setPlayersWhoHaveActed(prev => new Set(prev).add(playerId));
         // Advance to next player after fold
         advanceToNextPlayer();
     };
@@ -239,6 +247,8 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
 
         setPot(prevPot => prevPot + callAmount);
         animateChipTransfer(playerId);
+        // Mark player as having acted
+        setPlayersWhoHaveActed(prev => new Set(prev).add(playerId));
         // Advance to next player after call
         advanceToNextPlayer();
     };
@@ -284,6 +294,8 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
         animateChipTransfer(selectedPlayer.id);
         setBettingModalOpen(false);
         setSelectedPlayer(null);
+        // Mark player as having acted
+        setPlayersWhoHaveActed(prev => new Set(prev).add(selectedPlayer.id));
         // Advance to next player after bet
         advanceToNextPlayer();
     };
@@ -325,6 +337,8 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
                 currentBet: 0
             })));
             setCurrentBet(0);
+            // Reset players who have acted for new round
+            setPlayersWhoHaveActed(new Set());
             // Reset to first active player for new round
             setCurrentPlayerIndex(0);
             const firstActiveIndex = players.findIndex(p => p.status === 'active');
@@ -388,6 +402,8 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
         setCurrentBet(0);
         setCurrentHand(prev => prev + 1);
         setCurrentRound('pre-flop');
+        // Reset players who have acted for new hand
+        setPlayersWhoHaveActed(new Set());
         // Reset to first active player for new hand
         setCurrentPlayerIndex(0);
         const firstActiveIndex = players.findIndex(p => p.status === 'active' || (p.chips > 0));
@@ -440,8 +456,48 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
         }
     };
 
+    // Check if betting round is complete
+    const isBettingRoundComplete = () => {
+        const activePlayers = players.filter(p => p.status === 'active');
+        const allInPlayers = players.filter(p => p.status === 'all-in');
+
+        // If only 0 or 1 active players, betting is complete
+        if (activePlayers.length <= 1) {
+            return true;
+        }
+
+        // Check if all active players have had a chance to act
+        const allActivePlayersHaveActed = activePlayers.every(player =>
+            playersWhoHaveActed.has(player.id)
+        );
+
+        // If not all players have acted yet, betting is not complete
+        if (!allActivePlayersHaveActed) {
+            return false;
+        }
+
+        // If all players have acted, check if betting is equalized
+        if (currentBet === 0) {
+            // Everyone checked - betting is complete
+            return true;
+        } else {
+            // There's a bet - check if all active players have called it
+            const allActivePlayersHaveCalled = activePlayers.every(player => {
+                return player.currentBet === currentBet;
+            });
+
+            // Also check all-in players have called as much as they could
+            const allInPlayersHaveCalledWhatTheyCanOrAllIn = allInPlayers.every(player => {
+                return player.currentBet === currentBet || player.chips === 0;
+            });
+
+            return allActivePlayersHaveCalled && allInPlayersHaveCalledWhatTheyCanOrAllIn;
+        }
+    };
+
     const activePlayers = players.filter(p => p.status === 'active').length;
     const currentPlayer = players[currentPlayerIndex];
+    const bettingComplete = isBettingRoundComplete();
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-dark-950 via-dark-900 to-dark-950">
@@ -469,7 +525,20 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
                             </div>
                         </div>
                         {/* Current Player Indicator */}
-                        {currentPlayer && currentPlayer.status === 'active' && (
+                        {bettingComplete ? (
+                            <div className="mt-3 flex flex-col items-center justify-center gap-2">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></div>
+                                    <span className="text-blue-400 font-semibold text-sm">
+                                        Betting Round Complete
+                                    </span>
+                                    <div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></div>
+                                </div>
+                                <div className="text-xs text-gray-400">
+                                    All players have acted - ready to advance to next round
+                                </div>
+                            </div>
+                        ) : currentPlayer && currentPlayer.status === 'active' ? (
                             <div className="mt-3 flex flex-col items-center justify-center gap-2">
                                 <div className="flex items-center gap-2">
                                     <div className="w-3 h-3 bg-poker-green-500 rounded-full animate-pulse"></div>
@@ -486,7 +555,7 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
                                     }
                                 </div>
                             </div>
-                        )}
+                        ) : null}
                     </div>
                     <div className="order-2 sm:order-3 w-full sm:w-auto">
                         {/* Empty space for layout balance */}
@@ -625,7 +694,7 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
                                 </div>
 
                                 {/* Action Buttons */}
-                                {isCurrentPlayer && player.status === 'active' && (player.chips || 0) > 0 && (
+                                {isCurrentPlayer && player.status === 'active' && (player.chips || 0) > 0 && !bettingComplete && (
                                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                                         <button
                                             onClick={() => handleFold(player.id)}
@@ -666,8 +735,18 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
                                     </div>
                                 )}
 
+                                {/* Betting Complete Indicator for Active Players */}
+                                {player.status === 'active' && (player.chips || 0) > 0 && bettingComplete && (
+                                    <div className="text-center py-4 mt-4">
+                                        <div className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600/20 to-blue-700/20 text-blue-400 px-6 py-3 rounded-full border border-blue-600/40 text-responsive-sm">
+                                            <span>✅</span>
+                                            <span>Betting complete - waiting for next round</span>
+                                        </div>
+                                    </div>
+                                )}
+
                                 {/* Waiting Player Indicator */}
-                                {isWaitingPlayer && (
+                                {isWaitingPlayer && !bettingComplete && (
                                     <div className="text-center py-4 mt-4">
                                         <div className="inline-flex items-center gap-2 bg-gradient-to-r from-gray-600/20 to-gray-700/20 text-gray-400 px-6 py-3 rounded-full border border-gray-600/40 text-responsive-sm">
                                             <span>⏳</span>
@@ -706,18 +785,21 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
                 <div className="max-w-4xl mx-auto">
                     <button
                         onClick={handleNextRound}
-                        className={`btn-primary w-full ${pot > 0 || currentRound === 'river' ? 'animate-bounce-gentle success-glow' : ''}`}
-                        disabled={pot === 0 && players.every(p => p.currentBet === 0) && currentRound === 'pre-flop'}
+                        className={`w-full transition-all duration-300 ${bettingComplete
+                            ? 'btn-primary animate-bounce-gentle success-glow'
+                            : 'bg-gradient-to-r from-gray-600 to-gray-700 text-gray-300 cursor-not-allowed'
+                            }`}
+                        disabled={!bettingComplete}
                     >
                         <span className="flex items-center justify-center gap-3">
                             <span className="text-xl">
-                                {currentRound === 'river' ? '🏆' : '▶️'}
+                                {bettingComplete ? (currentRound === 'river' ? '🏆' : '▶️') : '⏸️'}
                             </span>
                             <span>
-                                {getNextActionText()}
+                                {bettingComplete ? getNextActionText() : 'Waiting for betting to complete...'}
                             </span>
                             <span className="text-xl">
-                                {currentRound === 'river' ? '🏆' : '▶️'}
+                                {bettingComplete ? (currentRound === 'river' ? '🏆' : '▶️') : '⏸️'}
                             </span>
                         </span>
                     </button>
