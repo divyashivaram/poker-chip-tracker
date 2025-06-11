@@ -335,20 +335,9 @@ const GameSetup: React.FC<GameSetupProps> = ({ onStartGame, onResumeGame }) => {
                                             <div className="flex gap-2">
                                                 <button
                                                     onClick={() => handleResumeGame(game)}
-                                                    className="flex-1 bg-gradient-to-r from-poker-green-500 to-poker-green-600 hover:from-poker-green-400 hover:to-poker-green-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 transform hover:scale-105 active:scale-100"
+                                                    className="w-full bg-gradient-to-r from-poker-green-500 to-poker-green-600 hover:from-poker-green-400 hover:to-poker-green-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 transform hover:scale-105 active:scale-100"
                                                 >
-                                                    🔄 Resume
-                                                </button>
-                                                <button
-                                                    onClick={() => {
-                                                        setGameName(game.gameName);
-                                                        setPlayers(game.players);
-                                                        setStartingChips(game.startingChips);
-                                                        setShowSavedGames(false);
-                                                    }}
-                                                    className="bg-dark-700/80 hover:bg-dark-650/80 text-gray-300 hover:text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 border border-dark-600/50 hover:border-dark-500/50"
-                                                >
-                                                    📋 Copy Setup
+                                                    🔄 Resume Game
                                                 </button>
                                             </div>
                                         </div>
