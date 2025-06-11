@@ -23,6 +23,7 @@ A mobile-first Progressive Web App (PWA) for tracking poker chips during games. 
 
 - **Frontend**: React 18 + TypeScript
 - **Styling**: Tailwind CSS with custom poker-themed colors
+- **Icons**: Feather Icons for professional, consistent iconography
 - **PWA**: Service Worker for offline functionality
 - **Storage**: localStorage for data persistence
 - **Build Tool**: Create React App
@@ -89,11 +90,27 @@ This creates an optimized production build in the `build` folder.
 
 ## Color Scheme
 
-The app uses a carefully chosen dark color palette:
-- **Background**: Deep blacks (#111111, #1a1a1a)
-- **Cards/Surfaces**: Dark grays (#2a2a2a, #3a3a3a)
-- **Primary Action**: Poker green (#0f5132)
-- **Text**: High contrast whites and light grays
+The app uses a refined, sophisticated color palette designed for premium poker environments:
+
+### Core Theme
+- **Background**: Deep blacks (#0a0a0a, #111111) with subtle gradients
+- **Cards/Surfaces**: Dark grays (#171717, #1f1f1f) with glassmorphic effects
+- **Text**: High contrast whites and light grays for optimal readability
+
+### Action Colors (Refined & Professional)
+- **Raise/Active**: Deep Emerald (#059669) - sophisticated alternative to bright green
+- **Call/Info**: Muted Slate Blue (#475569) - calm and informative for neutral actions  
+- **Fold/Stop**: Deep Crimson (#b91c1c) - refined red that clearly signals stop without being jarring
+
+### Accent Colors
+- **Gold**: Warm amber (#f59e0b) for pot amounts and highlights
+- **Teal**: Professional teal (#0f766e) for check actions
+- **Status Indicators**: Contextual colors that maintain hierarchy without competing for attention
+
+### Design Philosophy
+- **Monochromatic Icons**: Professional Feather icons in consistent white/light gray
+- **Subtle Position Badges**: Muted colors for BB/SB that provide information without distraction
+- **Premium Feel**: Solid borders instead of glows, refined color choices throughout
 
 ## Contributing
 
