@@ -16,9 +16,10 @@ interface SavedGame {
 
 interface GameSetupProps {
     onStartGame: (gameName: string, players: Player[], startingChips: number) => void;
+    onResumeGame?: () => void;
 }
 
-const GameSetup: React.FC<GameSetupProps> = ({ onStartGame }) => {
+const GameSetup: React.FC<GameSetupProps> = ({ onStartGame, onResumeGame }) => {
     const [gameName, setGameName] = useState('');
     const [players, setPlayers] = useState<Player[]>([
         { id: '1', name: '' },
@@ -80,8 +81,13 @@ const GameSetup: React.FC<GameSetupProps> = ({ onStartGame }) => {
     };
 
     const handleResumeGame = (game: SavedGame) => {
-        // Load the game data and start it
-        onStartGame(game.gameName, game.players, game.startingChips);
+        // Resume the saved game without clearing localStorage
+        if (onResumeGame) {
+            onResumeGame();
+        } else {
+            // Fallback to old method if onResumeGame not provided
+            onStartGame(game.gameName, game.players, game.startingChips);
+        }
         setShowSavedGames(false);
     };
 

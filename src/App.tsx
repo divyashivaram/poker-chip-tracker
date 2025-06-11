@@ -87,6 +87,26 @@ function App() {
     }
   };
 
+  const handleResumeGameFromSetup = () => {
+    // For resuming from the saved games list in GameSetup
+    // We need to load the current game state and switch to game view
+    const savedGameState = localStorage.getItem('currentGameState');
+    if (savedGameState) {
+      try {
+        const parsedState = JSON.parse(savedGameState);
+        setGameState({
+          gameName: parsedState.gameName,
+          players: parsedState.players || [],
+          startingChips: parsedState.startingChips || 1000,
+          timestamp: parsedState.timestamp || Date.now()
+        });
+        setCurrentView('game');
+      } catch (error) {
+        console.error('Error loading saved game for resume:', error);
+      }
+    }
+  };
+
   const handleStartNewGame = () => {
     setGameState(null);
     setShowResumeOption(false);
@@ -223,7 +243,7 @@ function App() {
   return (
     <div className="App">
       {currentView === 'setup' ? (
-        <GameSetup onStartGame={handleStartGame} />
+        <GameSetup onStartGame={handleStartGame} onResumeGame={handleResumeGameFromSetup} />
       ) : (
         gameState && (
           <GameInterface

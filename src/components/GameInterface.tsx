@@ -63,27 +63,39 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
         if (savedGameState) {
             try {
                 const gameState = JSON.parse(savedGameState);
+
+                // Prioritize saved game state over initial props when resuming
                 if (gameState.currentHand && typeof gameState.currentHand === 'number') {
                     setCurrentHand(gameState.currentHand);
                 }
                 if (gameState.currentRound) {
                     setCurrentRound(gameState.currentRound);
                 }
-                if (gameState.players && Array.isArray(gameState.players)) {
-                    // Ensure all player properties have valid default values
-                    const validatedPlayers = gameState.players.map((player: any) => ({
-                        id: player.id || '',
-                        name: player.name || '',
-                        chips: typeof player.chips === 'number' ? player.chips : startingChips,
-                        status: player.status || 'active',
-                        currentBet: typeof player.currentBet === 'number' ? player.currentBet : 0
-                    }));
+                if (gameState.players && Array.isArray(gameState.players) && gameState.players.length > 0) {
+                    // Use saved players with their actual game state
+                    const validatedPlayers = gameState.players.map((player: any) => {
+                        return {
+                            id: player.id || '',
+                            name: player.name || '',
+                            chips: typeof player.chips === 'number' && player.chips >= 0 ? player.chips : startingChips,
+                            status: ['active', 'folded', 'all-in'].includes(player.status) ? player.status : 'active',
+                            currentBet: typeof player.currentBet === 'number' && player.currentBet >= 0 ? player.currentBet : 0
+                        };
+                    });
                     setPlayers(validatedPlayers);
+                } else {
+                    // Fallback to initial players if saved players are invalid
+                    setPlayers(initialPlayers.map(p => ({
+                        ...p,
+                        chips: startingChips,
+                        status: 'active' as const,
+                        currentBet: 0
+                    })));
                 }
-                if (gameState.pot !== undefined && typeof gameState.pot === 'number') {
+                if (gameState.pot !== undefined && typeof gameState.pot === 'number' && gameState.pot >= 0) {
                     setPot(gameState.pot);
                 }
-                if (gameState.currentBet !== undefined && typeof gameState.currentBet === 'number') {
+                if (gameState.currentBet !== undefined && typeof gameState.currentBet === 'number' && gameState.currentBet >= 0) {
                     setCurrentBet(gameState.currentBet);
                 }
             } catch (error) {
@@ -100,8 +112,16 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
                 setCurrentHand(1);
                 setCurrentRound('pre-flop');
             }
+        } else {
+            // No saved state, initialize with starting values
+            setPlayers(initialPlayers.map(p => ({
+                ...p,
+                chips: startingChips,
+                status: 'active' as const,
+                currentBet: 0
+            })));
         }
-    }, []);
+    }, [initialPlayers, startingChips]);
 
     // Save game state to localStorage including hand and round
     useEffect(() => {
@@ -361,9 +381,9 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
 
         if (currentIndex < roundOrder.length - 1) {
             const nextRound = roundOrder[currentIndex + 1];
-            return `Next: ${getRoundDisplayName(nextRound)} ${getRoundEmoji(nextRound)}`;
+            return `Next: ${getRoundDisplayName(nextRound)}`;
         } else {
-            return `End Hand ${currentHand} & Distribute Pot 🏆`;
+            return `End Hand ${currentHand} & Distribute Pot`;
         }
     };
 
@@ -381,27 +401,23 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
                     >
                         ← Back to Setup
                     </button>
-                    <div className="text-center order-1 sm:order-2">
-                        <h1 className="text-responsive-xl font-bold text-white truncate mb-1">{gameName}</h1>
-                        <div className="flex items-center justify-center gap-4 text-responsive-sm">
-                            <div className="text-poker-gold font-medium">
-                                Hand #{currentHand}
+                    <div className="text-center order-1 sm:order-2 flex-1">
+                        <h1 className="text-2xl md:text-3xl font-bold text-white mb-2 tracking-tight">
+                            {gameName}
+                        </h1>
+                        <div className="flex items-center justify-center gap-4 text-sm text-gray-400">
+                            <div className="flex items-center gap-2">
+                                <span>🃏</span>
+                                <span>Hand #{currentHand}</span>
                             </div>
                             <div className="flex items-center gap-2">
-                                <span className="text-lg">{getRoundEmoji(currentRound)}</span>
-                                <span className="text-accent-purple font-semibold">
-                                    {getRoundDisplayName(currentRound)}
-                                </span>
+                                <span>{getRoundEmoji(currentRound)}</span>
+                                <span>{getRoundDisplayName(currentRound)}</span>
                             </div>
                         </div>
                     </div>
-                    <div className="text-center order-2 sm:order-3">
-                        <div className="text-gray-300 text-responsive-sm">
-                            {activePlayers}/{players.length} active
-                        </div>
-                        <div className="text-2xs text-gray-500">
-                            ${totalChipsInPlay.toLocaleString()} total
-                        </div>
+                    <div className="order-2 sm:order-3 w-full sm:w-auto">
+                        {/* Empty space for layout balance */}
                     </div>
                 </div>
             </div>
@@ -410,36 +426,44 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
             <div className={`pot-display mx-4 mt-6 text-center ${pot > 0 ? 'pot-grow animate-pulse-glow' : ''}`}>
                 <div className="flex items-center justify-center gap-6 mb-4">
                     <div className="text-center">
-                        <span className="text-gray-400 text-responsive-xs uppercase tracking-wider font-medium block">Hand</span>
-                        <div className="text-responsive-lg font-bold text-poker-gold mt-1">
+                        <div className="flex items-center justify-center gap-2 mb-2">
+                            <span className="text-lg">🃏</span>
+                            <span className="text-gray-300 text-xs uppercase tracking-wider font-medium">Hand</span>
+                        </div>
+                        <div className="text-lg font-bold text-poker-gold">
                             #{currentHand}
                         </div>
                     </div>
                     <div className="w-px h-12 bg-gradient-to-b from-transparent via-dark-600 to-transparent"></div>
                     <div className="text-center">
-                        <span className="text-gray-400 text-responsive-xs uppercase tracking-wider font-medium block">Round</span>
-                        <div className="text-responsive-base font-bold text-accent-purple mt-1 flex items-center gap-2">
-                            <span>{getRoundEmoji(currentRound)}</span>
-                            <span>{getRoundDisplayName(currentRound)}</span>
+                        <div className="flex items-center justify-center gap-2 mb-2">
+                            <span className="text-lg">{getRoundEmoji(currentRound)}</span>
+                            <span className="text-gray-300 text-xs uppercase tracking-wider font-medium">Round</span>
+                        </div>
+                        <div className="text-lg font-bold text-poker-gold">
+                            {getRoundDisplayName(currentRound)}
                         </div>
                     </div>
                     <div className="w-px h-12 bg-gradient-to-b from-transparent via-dark-600 to-transparent"></div>
                     <div className="text-center flex-1">
-                        <span className="text-gray-400 text-responsive-sm uppercase tracking-wider font-medium block">Current Pot</span>
-                        <div className="text-responsive-3xl font-bold text-poker-gold mt-1 animate-float">
+                        <span className="text-gray-300 text-sm uppercase tracking-wider font-medium block mb-2">Current Pot</span>
+                        <div className="text-3xl md:text-4xl font-bold text-poker-gold animate-float">
                             ${(pot || 0).toLocaleString()}
                         </div>
                     </div>
                     <div className="w-px h-12 bg-gradient-to-b from-transparent via-dark-600 to-transparent"></div>
                     <div className="text-center">
-                        <span className="text-gray-400 text-responsive-xs uppercase tracking-wider font-medium block">Players</span>
-                        <div className="text-responsive-lg font-bold text-gray-300 mt-1">
-                            {activePlayers}
+                        <div className="flex items-center justify-center gap-2 mb-2">
+                            <span className="text-lg">👥</span>
+                            <span className="text-gray-300 text-xs uppercase tracking-wider font-medium">Players</span>
+                        </div>
+                        <div className="text-lg font-bold text-poker-gold">
+                            {activePlayers}/{players.length}
                         </div>
                     </div>
                 </div>
                 {currentBet > 0 && (
-                    <div className="flex items-center justify-center gap-2 text-gray-300 text-responsive-base">
+                    <div className="flex items-center justify-center gap-2 text-gray-300 text-sm">
                         <div className="w-2 h-2 bg-accent-blue rounded-full animate-pulse"></div>
                         <span>Current bet: ${(currentBet || 0).toLocaleString()}</span>
                         <div className="w-2 h-2 bg-accent-blue rounded-full animate-pulse"></div>
@@ -460,7 +484,7 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
                         return (
                             <div
                                 key={player.id}
-                                className={`card-interactive ${player.status === 'folded' ? 'opacity-60' : ''
+                                className={`card-interactive ${player.status === 'folded' ? 'opacity-30' : ''
                                     } ${isAnimating ? 'chip-pulse' : ''}`}
                                 style={{ animationDelay: `${index * 0.1}s` }}
                             >
@@ -471,10 +495,10 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
                                             <h3 className="text-responsive-lg font-bold text-white truncate">
                                                 {player.name}
                                             </h3>
-                                            <div className={`inline-flex px-3 py-1.5 rounded-full text-responsive-xs font-semibold ${player.status === 'active' ? 'status-badge-active' :
-                                                player.status === 'all-in' ? 'status-badge-allin' :
-                                                    'status-badge-folded'
-                                                } ${player.status !== 'folded' ? 'status-change' : ''}`}>
+                                            <div className={`inline-flex px-3 py-1.5 rounded-full text-responsive-xs font-semibold ${player.status === 'active' ? 'bg-gradient-to-r from-green-500/20 to-green-600/20 text-green-400 border border-green-500/40' :
+                                                player.status === 'all-in' ? 'bg-gradient-to-r from-poker-gold-500/20 to-poker-gold-600/20 text-poker-gold-400 border border-poker-gold-500/40' :
+                                                    'bg-gradient-to-r from-gray-600/20 to-gray-700/20 text-gray-400 border border-gray-600/40'
+                                                }`}>
                                                 {getPlayerStatusText(player.status)}
                                             </div>
                                         </div>
@@ -633,7 +657,7 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
 
             <ConfirmationDialog
                 isOpen={confirmDialog.isOpen && confirmDialog.type === 'next-round'}
-                title={`Advance to ${getRoundDisplayName(confirmDialog.data?.nextRound)} ${getRoundEmoji(confirmDialog.data?.nextRound)}`}
+                title={`Advance to ${getRoundDisplayName(confirmDialog.data?.nextRound)}`}
                 message={`Ready to move from ${getRoundDisplayName(confirmDialog.data?.currentRound)} to ${getRoundDisplayName(confirmDialog.data?.nextRound)}? Current bets will be reset for the new betting round.`}
                 confirmText={`Yes, ${getRoundDisplayName(confirmDialog.data?.nextRound)}`}
                 cancelText="Stay Here"
