@@ -12,6 +12,7 @@ module.exports = {
                     700: '#2a2a2a',
                     600: '#3a3a3a',
                     500: '#4a4a4a',
+                    400: '#5a5a5a',
                 },
                 poker: {
                     green: '#0f5132',
