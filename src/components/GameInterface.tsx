@@ -9,6 +9,7 @@ interface Player {
     chips: number;
     status: 'active' | 'folded' | 'all-in';
     currentBet: number;
+    totalCommitted?: number; // Total amount committed to pot this hand (across all rounds)
     position?: 'dealer' | 'small-blind' | 'big-blind';
 }
 
@@ -34,7 +35,8 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
             ...p,
             chips: startingChips,
             status: 'active' as const,
-            currentBet: 0
+            currentBet: 0,
+            totalCommitted: 0
         }))
     );
     const [pot, setPot] = useState(0);
@@ -101,6 +103,7 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
 
         let nextDealerIndex = (dealerIndex + 1) % players.length;
         // Find next eligible player for dealer position
+        // eslint-disable-next-line no-loop-func
         while (!eligiblePlayers.some(p => p.id === players[nextDealerIndex].id)) {
             nextDealerIndex = (nextDealerIndex + 1) % players.length;
         }
@@ -140,7 +143,9 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
                             name: player.name || '',
                             chips: typeof player.chips === 'number' && player.chips >= 0 ? player.chips : startingChips,
                             status: ['active', 'folded', 'all-in'].includes(player.status) ? player.status : 'active',
-                            currentBet: typeof player.currentBet === 'number' && player.currentBet >= 0 ? player.currentBet : 0
+                            currentBet: typeof player.currentBet === 'number' && player.currentBet >= 0 ? player.currentBet : 0,
+                            totalCommitted: typeof player.totalCommitted === 'number' && player.totalCommitted >= 0 ? player.totalCommitted : 0,
+                            position: player.position
                         };
                     });
                     setPlayers(validatedPlayers);
@@ -150,7 +155,8 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
                         ...p,
                         chips: startingChips,
                         status: 'active' as const,
-                        currentBet: 0
+                        currentBet: 0,
+                        totalCommitted: 0
                     })));
                 }
                 if (gameState.pot !== undefined && typeof gameState.pot === 'number' && gameState.pot >= 0) {
@@ -166,7 +172,8 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
                     ...p,
                     chips: startingChips,
                     status: 'active' as const,
-                    currentBet: 0
+                    currentBet: 0,
+                    totalCommitted: 0
                 })));
                 setPot(0);
                 setCurrentBet(0);
@@ -181,7 +188,8 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
                 ...p,
                 chips: startingChips,
                 status: 'active' as const,
-                currentBet: 0
+                currentBet: 0,
+                totalCommitted: 0
             })));
         }
     }, [initialPlayers, startingChips]);
@@ -244,6 +252,7 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
             timestamp: Date.now()
         };
         localStorage.setItem('currentGameState', JSON.stringify(gameState));
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [gameName, players, pot, currentBet, currentHand, currentRound, currentPlayerIndex, dealerIndex]);
 
     const animateChipTransfer = (playerId: string) => {
@@ -308,6 +317,7 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
                     ...player,
                     chips: newChips,
                     currentBet: newCurrentBet,
+                    totalCommitted: (player.totalCommitted || 0) + callAmount,
                     status: newChips === 0 ? 'all-in' as const : player.status
                 };
             }
@@ -348,6 +358,7 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
                     ...player,
                     chips: newChips,
                     currentBet: newCurrentBet,
+                    totalCommitted: (player.totalCommitted || 0) + actualBet,
                     status: newChips === 0 ? 'all-in' as const : player.status
                 };
             }
@@ -440,7 +451,8 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
             ...player,
             chips: player.chips + (distribution[player.id] || 0),
             status: player.chips + (distribution[player.id] || 0) > 0 ? 'active' as const : 'folded' as const,
-            currentBet: 0
+            currentBet: 0,
+            totalCommitted: 0
         })));
 
         // Animate all winners
@@ -467,7 +479,8 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
         setPlayers(prev => prev.map(player => ({
             ...player,
             status: player.chips > 0 ? 'active' as const : 'folded' as const,
-            currentBet: 0
+            currentBet: 0,
+            totalCommitted: 0
         })));
 
         setPot(0);
@@ -773,9 +786,9 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
                                             </div>
                                             {(player.currentBet || 0) > 0 && (
                                                 <div className="flex items-center gap-2">
-                                                    <div className="w-3 h-3 bg-poker-gold-500 rounded-full"></div>
-                                                    <span className="text-gray-300">Bet:</span>
-                                                    <span className="text-poker-gold font-semibold">
+                                                    <div className="w-3 h-3 bg-poker-gold-500 rounded-full animate-pulse"></div>
+                                                    <span className="text-gray-300">Current Bet:</span>
+                                                    <span className="text-poker-gold font-bold">
                                                         ${(player.currentBet || 0).toLocaleString()}
                                                     </span>
                                                 </div>
@@ -826,6 +839,24 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
                                     </div>
                                 )}
 
+                                {/* Current Bet Indicator - Always visible for active players */}
+                                {player.status === 'active' && (
+                                    <div className="flex justify-center mt-4">
+                                        <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full transition-all ${(player.totalCommitted || 0) > 0
+                                            ? 'bg-gradient-to-r from-poker-gold-500/20 to-poker-gold-600/20 border border-poker-gold-500/40 text-poker-gold-400'
+                                            : 'bg-gradient-to-r from-gray-600/20 to-gray-700/20 border border-gray-600/40 text-gray-400'
+                                            }`}>
+                                            <span className="text-lg">🎰</span>
+                                            <span className="font-semibold text-sm">
+                                                {(player.totalCommitted || 0) > 0
+                                                    ? `$${(player.totalCommitted || 0).toLocaleString()} total committed`
+                                                    : 'No contribution yet'
+                                                }
+                                            </span>
+                                        </div>
+                                    </div>
+                                )}
+
                                 {/* Betting Complete Indicator for Active Players */}
                                 {player.status === 'active' && (player.chips || 0) > 0 && bettingComplete && (
                                     <div className="text-center py-4 mt-4">
@@ -846,23 +877,39 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
                                     </div>
                                 )}
 
-                                {/* Status Indicators */}
+                                {/* Status Indicators with Bet Information */}
                                 {player.status === 'all-in' && (
-                                    <div className="text-center py-4 mt-4">
+                                    <div className="text-center py-4 mt-4 space-y-3">
                                         <div className="inline-flex items-center gap-2 bg-gradient-to-r from-poker-gold-500 to-poker-gold-600 text-dark-900 px-6 py-3 rounded-full font-bold uppercase tracking-wider text-responsive-sm shadow-glow-gold">
                                             <span>🎯</span>
                                             <span>ALL IN</span>
                                             <span>🎯</span>
                                         </div>
+                                        {(player.totalCommitted || 0) > 0 && (
+                                            <div className="inline-flex items-center gap-2 bg-gradient-to-r from-poker-gold-500/20 to-poker-gold-600/20 border border-poker-gold-500/40 text-poker-gold-400 px-4 py-2 rounded-full">
+                                                <span>💰</span>
+                                                <span className="font-semibold text-sm">
+                                                    ${(player.totalCommitted || 0).toLocaleString()} total committed
+                                                </span>
+                                            </div>
+                                        )}
                                     </div>
                                 )}
 
                                 {player.status === 'folded' && (
-                                    <div className="text-center py-4 mt-4">
+                                    <div className="text-center py-4 mt-4 space-y-3">
                                         <div className="inline-flex items-center gap-2 bg-gradient-to-r from-gray-600 to-gray-700 text-white px-6 py-3 rounded-full font-bold uppercase tracking-wider text-responsive-sm">
                                             <span>🃏</span>
                                             <span>FOLDED</span>
                                         </div>
+                                        {(player.totalCommitted || 0) > 0 && (
+                                            <div className="inline-flex items-center gap-2 bg-gradient-to-r from-gray-600/20 to-gray-700/20 border border-gray-600/40 text-gray-400 px-4 py-2 rounded-full">
+                                                <span>💸</span>
+                                                <span className="font-semibold text-sm">
+                                                    ${(player.totalCommitted || 0).toLocaleString()} forfeited
+                                                </span>
+                                            </div>
+                                        )}
                                     </div>
                                 )}
                             </div>
