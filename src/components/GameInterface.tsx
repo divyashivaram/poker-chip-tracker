@@ -1,4 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import {
+    Play, User, DollarSign, Minus, Check, Zap,
+    Target, Settings, TrendingUp, ArrowRight,
+    Award, Pause, Circle, Clock, X,
+    AlertTriangle, CheckCircle
+} from 'react-feather';
 import BettingModal from './BettingModal';
 import PotDistribution from './PotDistribution';
 import ConfirmationDialog from './ConfirmationDialog';
@@ -93,8 +99,6 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
         const nextIndex = getNextActivePlayerIndex();
         setCurrentPlayerIndex(nextIndex);
     };
-
-
 
     // Function to move dealer button to next player
     const advanceDealerButton = () => {
@@ -501,9 +505,24 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
 
     const getPlayerStatusText = (status: Player['status']) => {
         switch (status) {
-            case 'active': return '🟢 Active';
-            case 'folded': return '🔴 Folded';
-            case 'all-in': return '🟡 All-In';
+            case 'active': return (
+                <span className="flex items-center gap-1">
+                    <CheckCircle size={12} className="text-green-400" />
+                    <span>Active</span>
+                </span>
+            );
+            case 'folded': return (
+                <span className="flex items-center gap-1">
+                    <X size={12} className="text-gray-400" />
+                    <span>Folded</span>
+                </span>
+            );
+            case 'all-in': return (
+                <span className="flex items-center gap-1">
+                    <Zap size={12} className="text-poker-gold-400" />
+                    <span>All-In</span>
+                </span>
+            );
             default: return 'Active';
         }
     };
@@ -517,12 +536,12 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
         }
     };
 
-    const getRoundEmoji = (round: BettingRound) => {
+    const getRoundIcon = (round: BettingRound) => {
         switch (round) {
-            case 'pre-flop': return '🃏';
-            case 'flop': return '🎯';
-            case 'turn': return '🔄';
-            case 'river': return '🏁';
+            case 'pre-flop': return <User size={16} className="text-gray-300" />;
+            case 'flop': return <Target size={16} className="text-gray-300" />;
+            case 'turn': return <ArrowRight size={16} className="text-gray-300" />;
+            case 'river': return <Award size={16} className="text-gray-300" />;
         }
     };
 
@@ -598,11 +617,11 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
                         </h1>
                         <div className="flex items-center justify-center gap-4 text-sm text-gray-400">
                             <div className="flex items-center gap-2">
-                                <span>🃏</span>
+                                <User size={16} className="text-gray-400" />
                                 <span>Hand #{currentHand}</span>
                             </div>
                             <div className="flex items-center gap-2">
-                                <span>{getRoundEmoji(currentRound)}</span>
+                                {getRoundIcon(currentRound)}
                                 <span>{getRoundDisplayName(currentRound)}</span>
                             </div>
                         </div>
@@ -644,7 +663,7 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
                             onClick={() => setShowPositionSettings(true)}
                             className="btn-action bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-lg text-sm transition-colors flex items-center gap-2 mx-auto sm:mx-0"
                         >
-                            <span>🎯</span>
+                            <Settings size={16} className="text-white" />
                             <span>Positions</span>
                         </button>
                     </div>
@@ -656,7 +675,7 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
                 <div className="flex items-center justify-center gap-6 mb-4">
                     <div className="text-center">
                         <div className="flex items-center justify-center gap-2 mb-2">
-                            <span className="text-lg">🃏</span>
+                            <User size={16} className="text-gray-300" />
                             <span className="text-gray-300 text-xs uppercase tracking-wider font-medium">Hand</span>
                         </div>
                         <div className="text-lg font-bold text-poker-gold">
@@ -666,7 +685,7 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
                     <div className="w-px h-12 bg-gradient-to-b from-transparent via-dark-600 to-transparent"></div>
                     <div className="text-center">
                         <div className="flex items-center justify-center gap-2 mb-2">
-                            <span className="text-lg">{getRoundEmoji(currentRound)}</span>
+                            {getRoundIcon(currentRound)}
                             <span className="text-gray-300 text-xs uppercase tracking-wider font-medium">Round</span>
                         </div>
                         <div className="text-lg font-bold text-poker-gold">
@@ -683,7 +702,7 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
                     <div className="w-px h-12 bg-gradient-to-b from-transparent via-dark-600 to-transparent"></div>
                     <div className="text-center">
                         <div className="flex items-center justify-center gap-2 mb-2">
-                            <span className="text-lg">👥</span>
+                            <User size={16} className="text-gray-300" />
                             <span className="text-gray-300 text-xs uppercase tracking-wider font-medium">Players</span>
                         </div>
                         <div className="text-lg font-bold text-poker-gold">
@@ -715,13 +734,13 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
                         // Determine the action text and icon for the middle button
                         const getCheckCallAction = () => {
                             if (canCheck) {
-                                return { text: 'Check', icon: '✋', disabled: false };
+                                return { text: 'Check', icon: <Check size={16} className="text-white" />, disabled: false };
                             } else if (callAmount >= (player.chips || 0)) {
-                                return { text: 'All-In', icon: '🚨', disabled: false };
+                                return { text: 'All-In', icon: <Zap size={16} className="text-white" />, disabled: false };
                             } else if (canCall) {
-                                return { text: `Call $${callAmount.toLocaleString()}`, icon: '💰', disabled: false };
+                                return { text: `Call $${callAmount.toLocaleString()}`, icon: <DollarSign size={16} className="text-white" />, disabled: false };
                             } else {
-                                return { text: 'Call', icon: '💰', disabled: true };
+                                return { text: 'Call', icon: <DollarSign size={16} className="text-white" />, disabled: true };
                             }
                         };
 
@@ -742,7 +761,7 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
                                 {isCurrentPlayer && (
                                     <div className="mb-4">
                                         <div className="bg-gradient-to-r from-poker-green-500 to-poker-green-600 text-white px-4 py-2 rounded-lg text-sm font-bold uppercase tracking-wider flex items-center justify-center gap-2">
-                                            <span>▶️</span>
+                                            <Play size={14} className="text-white" />
                                             <span>Your Turn</span>
                                         </div>
                                     </div>
@@ -762,8 +781,12 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
                                                             ? 'bg-gradient-to-r from-slate-500/20 to-slate-600/20 text-slate-400 border border-slate-500/40'
                                                             : 'bg-gradient-to-r from-gray-700/20 to-gray-800/20 text-gray-500 border border-gray-700/40'
                                                         }`}>
-                                                        {player.position === 'dealer' ? '🎯 DEALER' :
-                                                            player.position === 'small-blind' ? 'SB' : 'BB'}
+                                                        {player.position === 'dealer' ? (
+                                                            <span className="flex items-center gap-1">
+                                                                <Target size={10} className="text-yellow-400" />
+                                                                <span>DEALER</span>
+                                                            </span>
+                                                        ) : player.position === 'small-blind' ? 'SB' : 'BB'}
                                                     </div>
                                                 )}
 
@@ -805,7 +828,7 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
                                             className="btn-action bg-gradient-to-r from-poker-red-500 to-poker-red-600 hover:from-poker-red-400 hover:to-poker-red-500 text-white border border-poker-red-400/30"
                                         >
                                             <span className="flex items-center justify-center gap-2">
-                                                <span>🃏</span>
+                                                <Minus size={16} className="text-white" />
                                                 <span>Fold</span>
                                             </span>
                                         </button>
@@ -821,7 +844,7 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
                                                 }`}
                                         >
                                             <span className="flex items-center justify-center gap-2">
-                                                <span className="text-lg">{checkCallAction.icon}</span>
+                                                {checkCallAction.icon}
                                                 <span className="font-semibold">{checkCallAction.text}</span>
                                             </span>
                                         </button>
@@ -832,7 +855,7 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
                                             className="btn-action bg-gradient-to-r from-poker-green-500 to-poker-green-600 hover:from-poker-green-400 hover:to-poker-green-500 disabled:from-gray-600 disabled:to-gray-700 disabled:cursor-not-allowed text-white border border-poker-green-400/30 disabled:border-gray-600/30"
                                         >
                                             <span className="flex items-center justify-center gap-2">
-                                                <span>{canRaise ? '📈' : '🎯'}</span>
+                                                {canRaise ? <TrendingUp size={16} className="text-white" /> : <Target size={16} className="text-white" />}
                                                 <span>{canRaise ? 'Raise' : 'All-In'}</span>
                                             </span>
                                         </button>
@@ -843,7 +866,7 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
                                 {player.status === 'active' && (player.totalCommitted || 0) > 0 && (
                                     <div className="flex justify-center mt-4">
                                         <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gradient-to-r from-poker-gold-500/20 to-poker-gold-600/20 border border-poker-gold-500/40 text-poker-gold-400">
-                                            <span className="text-sm">🔘</span>
+                                            <Circle size={12} className="text-poker-gold-400" />
                                             <span className="font-semibold text-sm">
                                                 In for: ${(player.totalCommitted || 0).toLocaleString()}
                                             </span>
@@ -855,7 +878,7 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
                                 {player.status === 'active' && (player.chips || 0) > 0 && bettingComplete && (
                                     <div className="text-center py-4 mt-4">
                                         <div className="inline-flex items-center gap-2 bg-gradient-to-r from-slate-600/20 to-slate-700/20 text-slate-400 px-6 py-3 rounded-full border border-slate-600/40 text-responsive-sm">
-                                            <span>✅</span>
+                                            <CheckCircle size={16} className="text-slate-400" />
                                             <span>Betting complete - waiting for next round</span>
                                         </div>
                                     </div>
@@ -865,7 +888,7 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
                                 {isWaitingPlayer && !bettingComplete && (
                                     <div className="text-center py-4 mt-4">
                                         <div className="inline-flex items-center gap-2 bg-gradient-to-r from-gray-600/20 to-gray-700/20 text-gray-400 px-6 py-3 rounded-full border border-gray-600/40 text-responsive-sm">
-                                            <span>⏳</span>
+                                            <Clock size={16} className="text-gray-400" />
                                             <span>Waiting for turn</span>
                                         </div>
                                     </div>
@@ -924,15 +947,11 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
                         disabled={!bettingComplete}
                     >
                         <span className="flex items-center justify-center gap-3">
-                            <span className="text-xl">
-                                {bettingComplete ? (currentRound === 'river' ? '🏆' : '▶️') : '⏸️'}
-                            </span>
+                            {bettingComplete ? (currentRound === 'river' ? <Award size={20} className="text-white" /> : <ArrowRight size={20} className="text-white" />) : <Pause size={20} className="text-white" />}
                             <span>
                                 {bettingComplete ? getNextActionText() : 'Waiting for betting to complete...'}
                             </span>
-                            <span className="text-xl">
-                                {bettingComplete ? (currentRound === 'river' ? '🏆' : '▶️') : '⏸️'}
-                            </span>
+                            {bettingComplete ? (currentRound === 'river' ? <Award size={20} className="text-white" /> : <ArrowRight size={20} className="text-white" />) : <Pause size={20} className="text-white" />}
                         </span>
                     </button>
                 </div>
@@ -965,14 +984,14 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
                         <div className="p-6">
                             <div className="flex items-center justify-between mb-6">
                                 <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                                    <span>🎯</span>
+                                    <Target size={20} className="text-white" />
                                     Player Positions
                                 </h2>
                                 <button
                                     onClick={() => setShowPositionSettings(false)}
                                     className="text-gray-400 hover:text-white transition-colors"
                                 >
-                                    ✕
+                                    <X size={20} />
                                 </button>
                             </div>
 
@@ -1001,8 +1020,9 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
                                                 </div>
                                                 <div className="flex gap-1">
                                                     {player.position === 'dealer' && (
-                                                        <span className="px-2 py-1 text-xs bg-yellow-500/20 text-yellow-400 rounded">
-                                                            🎯 DEALER
+                                                        <span className="px-2 py-1 text-xs bg-yellow-500/20 text-yellow-400 rounded flex items-center gap-1">
+                                                            <Target size={12} className="text-yellow-400" />
+                                                            <span>DEALER</span>
                                                         </span>
                                                     )}
                                                     {player.position === 'small-blind' && (
