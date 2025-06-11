@@ -760,7 +760,7 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
                                                         ? 'bg-gradient-to-r from-yellow-500/20 to-yellow-600/20 text-yellow-400 border border-yellow-500/40'
                                                         : player.position === 'small-blind'
                                                             ? 'bg-gradient-to-r from-slate-500/20 to-slate-600/20 text-slate-400 border border-slate-500/40'
-                                                            : 'bg-gradient-to-r from-purple-500/20 to-purple-600/20 text-purple-400 border border-purple-500/40'
+                                                            : 'bg-gradient-to-r from-gray-700/20 to-gray-800/20 text-gray-500 border border-gray-700/40'
                                                         }`}>
                                                         {player.position === 'dealer' ? '🎯 DEALER' :
                                                             player.position === 'small-blind' ? 'SB' : 'BB'}
@@ -839,19 +839,13 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
                                     </div>
                                 )}
 
-                                {/* Current Bet Indicator - Always visible for active players */}
-                                {player.status === 'active' && (
+                                {/* Current Bet Indicator - Only show if there's a contribution */}
+                                {player.status === 'active' && (player.totalCommitted || 0) > 0 && (
                                     <div className="flex justify-center mt-4">
-                                        <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full transition-all ${(player.totalCommitted || 0) > 0
-                                            ? 'bg-gradient-to-r from-poker-gold-500/20 to-poker-gold-600/20 border border-poker-gold-500/40 text-poker-gold-400'
-                                            : 'bg-gradient-to-r from-gray-600/20 to-gray-700/20 border border-gray-600/40 text-gray-400'
-                                            }`}>
-                                            <span className="text-lg">🎰</span>
+                                        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gradient-to-r from-poker-gold-500/20 to-poker-gold-600/20 border border-poker-gold-500/40 text-poker-gold-400">
+                                            <span className="text-sm">🔘</span>
                                             <span className="font-semibold text-sm">
-                                                {(player.totalCommitted || 0) > 0
-                                                    ? `$${(player.totalCommitted || 0).toLocaleString()} total committed`
-                                                    : 'No contribution yet'
-                                                }
+                                                In for: ${(player.totalCommitted || 0).toLocaleString()}
                                             </span>
                                         </div>
                                     </div>
@@ -1017,7 +1011,7 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
                                                         </span>
                                                     )}
                                                     {player.position === 'big-blind' && (
-                                                        <span className="px-2 py-1 text-xs bg-purple-500/20 text-purple-400 rounded">
+                                                        <span className="px-2 py-1 text-xs bg-gray-700/20 text-gray-500 rounded">
                                                             BB
                                                         </span>
                                                     )}
