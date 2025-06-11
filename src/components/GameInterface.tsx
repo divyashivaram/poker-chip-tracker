@@ -18,6 +18,8 @@ interface GameInterfaceProps {
     onBackToSetup: () => void;
 }
 
+type BettingRound = 'pre-flop' | 'flop' | 'turn' | 'river';
+
 const GameInterface: React.FC<GameInterfaceProps> = ({
     gameName,
     initialPlayers,
@@ -34,7 +36,8 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
     );
     const [pot, setPot] = useState(0);
     const [currentBet, setCurrentBet] = useState(0);
-    const [currentRound, setCurrentRound] = useState(1);
+    const [currentHand, setCurrentHand] = useState(1);
+    const [currentRound, setCurrentRound] = useState<BettingRound>('pre-flop');
     const [animatingChips, setAnimatingChips] = useState<string[]>([]);
 
     // Betting modal state
@@ -47,17 +50,20 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
     // Confirmation dialog state
     const [confirmDialog, setConfirmDialog] = useState<{
         isOpen: boolean;
-        type: 'all-in' | 'fold' | 'new-hand' | 'back-to-setup';
+        type: 'all-in' | 'fold' | 'new-hand' | 'next-round' | 'back-to-setup';
         playerId?: string;
         data?: any;
     }>({ isOpen: false, type: 'fold' });
 
-    // Load saved game state including round
+    // Load saved game state including hand and round
     useEffect(() => {
         const savedGameState = localStorage.getItem('currentGameState');
         if (savedGameState) {
             try {
                 const gameState = JSON.parse(savedGameState);
+                if (gameState.currentHand) {
+                    setCurrentHand(gameState.currentHand);
+                }
                 if (gameState.currentRound) {
                     setCurrentRound(gameState.currentRound);
                 }
@@ -76,18 +82,19 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
         }
     }, []);
 
-    // Save game state to localStorage including round
+    // Save game state to localStorage including hand and round
     useEffect(() => {
         const gameState = {
             gameName,
             players,
             pot,
             currentBet,
+            currentHand,
             currentRound,
             timestamp: Date.now()
         };
         localStorage.setItem('currentGameState', JSON.stringify(gameState));
-    }, [gameName, players, pot, currentBet, currentRound]);
+    }, [gameName, players, pot, currentBet, currentHand, currentRound]);
 
     const animateChipTransfer = (playerId: string) => {
         setAnimatingChips(prev => [...prev, playerId]);
@@ -205,6 +212,42 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
         setSelectedPlayer(null);
     };
 
+    const handleNextRound = () => {
+        const roundOrder: BettingRound[] = ['pre-flop', 'flop', 'turn', 'river'];
+        const currentIndex = roundOrder.indexOf(currentRound);
+
+        if (currentIndex < roundOrder.length - 1) {
+            // Move to next betting round
+            setConfirmDialog({
+                isOpen: true,
+                type: 'next-round',
+                data: {
+                    currentRound: currentRound,
+                    nextRound: roundOrder[currentIndex + 1]
+                }
+            });
+        } else {
+            // End of hand, go to pot distribution
+            handleEndHand();
+        }
+    };
+
+    const confirmNextRound = () => {
+        const roundOrder: BettingRound[] = ['pre-flop', 'flop', 'turn', 'river'];
+        const currentIndex = roundOrder.indexOf(currentRound);
+
+        if (currentIndex < roundOrder.length - 1) {
+            setCurrentRound(roundOrder[currentIndex + 1]);
+            // Reset current bets for new round but keep pot
+            setPlayers(prev => prev.map(player => ({
+                ...player,
+                currentBet: 0
+            })));
+            setCurrentBet(0);
+        }
+        setConfirmDialog({ isOpen: false, type: 'next-round' });
+    };
+
     const handleEndHand = () => {
         if (pot > 0) {
             setConfirmDialog({
@@ -255,7 +298,8 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
         })));
         setPot(0);
         setCurrentBet(0);
-        setCurrentRound(prev => prev + 1);
+        setCurrentHand(prev => prev + 1);
+        setCurrentRound('pre-flop');
     };
 
     const handleBackToSetup = () => {
@@ -280,6 +324,36 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
         }
     };
 
+    const getRoundDisplayName = (round: BettingRound) => {
+        switch (round) {
+            case 'pre-flop': return 'Pre-Flop';
+            case 'flop': return 'Flop';
+            case 'turn': return 'Turn';
+            case 'river': return 'River';
+        }
+    };
+
+    const getRoundEmoji = (round: BettingRound) => {
+        switch (round) {
+            case 'pre-flop': return '🃏';
+            case 'flop': return '🎯';
+            case 'turn': return '🔄';
+            case 'river': return '🏁';
+        }
+    };
+
+    const getNextActionText = () => {
+        const roundOrder: BettingRound[] = ['pre-flop', 'flop', 'turn', 'river'];
+        const currentIndex = roundOrder.indexOf(currentRound);
+
+        if (currentIndex < roundOrder.length - 1) {
+            const nextRound = roundOrder[currentIndex + 1];
+            return `Next: ${getRoundDisplayName(nextRound)} ${getRoundEmoji(nextRound)}`;
+        } else {
+            return `End Hand ${currentHand} & Distribute Pot 🏆`;
+        }
+    };
+
     const activePlayers = players.filter(p => p.status === 'active').length;
     const totalChipsInPlay = players.reduce((sum, p) => sum + p.chips, 0) + pot;
 
@@ -298,12 +372,12 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
                         <h1 className="text-responsive-xl font-bold text-white truncate mb-1">{gameName}</h1>
                         <div className="flex items-center justify-center gap-4 text-responsive-sm">
                             <div className="text-poker-gold font-medium">
-                                Live Game Session
+                                Hand #{currentHand}
                             </div>
                             <div className="flex items-center gap-2">
-                                <div className="w-2 h-2 bg-accent-purple rounded-full animate-pulse"></div>
+                                <span className="text-lg">{getRoundEmoji(currentRound)}</span>
                                 <span className="text-accent-purple font-semibold">
-                                    Round {currentRound}
+                                    {getRoundDisplayName(currentRound)}
                                 </span>
                             </div>
                         </div>
@@ -319,13 +393,21 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
                 </div>
             </div>
 
-            {/* Premium Pot Display with Round Info */}
+            {/* Premium Pot Display with Hand and Round Info */}
             <div className={`pot-display mx-4 mt-6 text-center ${pot > 0 ? 'pot-grow animate-pulse-glow' : ''}`}>
                 <div className="flex items-center justify-center gap-6 mb-4">
                     <div className="text-center">
+                        <span className="text-gray-400 text-responsive-xs uppercase tracking-wider font-medium block">Hand</span>
+                        <div className="text-responsive-lg font-bold text-poker-gold mt-1">
+                            #{currentHand}
+                        </div>
+                    </div>
+                    <div className="w-px h-12 bg-gradient-to-b from-transparent via-dark-600 to-transparent"></div>
+                    <div className="text-center">
                         <span className="text-gray-400 text-responsive-xs uppercase tracking-wider font-medium block">Round</span>
-                        <div className="text-responsive-lg font-bold text-accent-purple mt-1">
-                            #{currentRound}
+                        <div className="text-responsive-base font-bold text-accent-purple mt-1 flex items-center gap-2">
+                            <span>{getRoundEmoji(currentRound)}</span>
+                            <span>{getRoundDisplayName(currentRound)}</span>
                         </div>
                     </div>
                     <div className="w-px h-12 bg-gradient-to-b from-transparent via-dark-600 to-transparent"></div>
@@ -474,19 +556,19 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
             <div className="fixed bottom-0 left-0 right-0 bg-dark-850/95 backdrop-blur-lg border-t border-dark-700/50 p-4 shadow-2xl">
                 <div className="max-w-4xl mx-auto">
                     <button
-                        onClick={handleEndHand}
-                        className={`btn-primary w-full ${pot > 0 ? 'animate-bounce-gentle success-glow' : ''}`}
-                        disabled={pot === 0 && players.every(p => p.currentBet === 0)}
+                        onClick={handleNextRound}
+                        className={`btn-primary w-full ${pot > 0 || currentRound === 'river' ? 'animate-bounce-gentle success-glow' : ''}`}
+                        disabled={pot === 0 && players.every(p => p.currentBet === 0) && currentRound === 'pre-flop'}
                     >
                         <span className="flex items-center justify-center gap-3">
                             <span className="text-xl">
-                                {pot > 0 ? '🏆' : '🃏'}
+                                {currentRound === 'river' ? '🏆' : '▶️'}
                             </span>
                             <span>
-                                {pot > 0 ? `End Round ${currentRound} & Distribute Pot` : `Start Round ${currentRound + 1}`}
+                                {getNextActionText()}
                             </span>
                             <span className="text-xl">
-                                {pot > 0 ? '🏆' : '🃏'}
+                                {currentRound === 'river' ? '🏆' : '▶️'}
                             </span>
                         </span>
                     </button>
@@ -537,10 +619,21 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
             />
 
             <ConfirmationDialog
+                isOpen={confirmDialog.isOpen && confirmDialog.type === 'next-round'}
+                title={`Advance to ${getRoundDisplayName(confirmDialog.data?.nextRound)} ${getRoundEmoji(confirmDialog.data?.nextRound)}`}
+                message={`Ready to move from ${getRoundDisplayName(confirmDialog.data?.currentRound)} to ${getRoundDisplayName(confirmDialog.data?.nextRound)}? Current bets will be reset for the new betting round.`}
+                confirmText={`Yes, ${getRoundDisplayName(confirmDialog.data?.nextRound)}`}
+                cancelText="Stay Here"
+                confirmVariant="success"
+                onConfirm={confirmNextRound}
+                onCancel={() => setConfirmDialog({ isOpen: false, type: 'next-round' })}
+            />
+
+            <ConfirmationDialog
                 isOpen={confirmDialog.isOpen && confirmDialog.type === 'new-hand'}
                 title="⚠️ Pot Not Distributed"
-                message={`There's $${confirmDialog.data?.potAmount?.toLocaleString()} in the pot. Starting round ${currentRound + 1} will reset all bets. Distribute the pot first?`}
-                confirmText={`Start Round ${currentRound + 1} Anyway`}
+                message={`There's $${confirmDialog.data?.potAmount?.toLocaleString()} in the pot. Starting hand ${currentHand + 1} will reset everything. Distribute the pot first?`}
+                confirmText={`Start Hand ${currentHand + 1} Anyway`}
                 cancelText="Distribute Pot First"
                 confirmVariant="warning"
                 onConfirm={confirmNewHand}
@@ -553,7 +646,7 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
             <ConfirmationDialog
                 isOpen={confirmDialog.isOpen && confirmDialog.type === 'back-to-setup'}
                 title="Return to Game Setup"
-                message={`Are you sure you want to go back to setup? Round ${currentRound} progress will be saved and you can resume it later.`}
+                message={`Are you sure you want to go back to setup? Hand ${currentHand} (${getRoundDisplayName(currentRound)}) progress will be saved and you can resume it later.`}
                 confirmText="Yes, Back to Setup"
                 cancelText="Stay in Game"
                 confirmVariant="warning"
