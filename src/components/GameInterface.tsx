@@ -9,6 +9,7 @@ interface Player {
     chips: number;
     status: 'active' | 'folded' | 'all-in';
     currentBet: number;
+    position?: 'dealer' | 'small-blind' | 'big-blind';
 }
 
 interface GameInterfaceProps {
@@ -45,6 +46,10 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
     // Turn management state
     const [currentPlayerIndex, setCurrentPlayerIndex] = useState(0);
     const [playersWhoHaveActed, setPlayersWhoHaveActed] = useState<Set<string>>(new Set());
+
+    // Position management state
+    const [dealerIndex, setDealerIndex] = useState(0);
+    const [showPositionSettings, setShowPositionSettings] = useState(false);
 
     // Betting modal state
     const [bettingModalOpen, setBettingModalOpen] = useState(false);
@@ -87,6 +92,23 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
         setCurrentPlayerIndex(nextIndex);
     };
 
+
+
+    // Function to move dealer button to next player
+    const advanceDealerButton = () => {
+        const eligiblePlayers = players.filter(p => p.status === 'active' || p.chips > 0);
+        if (eligiblePlayers.length < 2) return;
+
+        let nextDealerIndex = (dealerIndex + 1) % players.length;
+        // Find next eligible player for dealer position
+        while (!eligiblePlayers.some(p => p.id === players[nextDealerIndex].id)) {
+            nextDealerIndex = (nextDealerIndex + 1) % players.length;
+        }
+
+        setDealerIndex(nextDealerIndex);
+        return nextDealerIndex;
+    };
+
     // Load saved game state including hand and round
     useEffect(() => {
         const savedGameState = localStorage.getItem('currentGameState');
@@ -106,6 +128,9 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
                 }
                 if (gameState.playersWhoHaveActed && Array.isArray(gameState.playersWhoHaveActed)) {
                     setPlayersWhoHaveActed(new Set(gameState.playersWhoHaveActed));
+                }
+                if (gameState.dealerIndex !== undefined && typeof gameState.dealerIndex === 'number') {
+                    setDealerIndex(gameState.dealerIndex);
                 }
                 if (gameState.players && Array.isArray(gameState.players) && gameState.players.length > 0) {
                     // Use saved players with their actual game state
@@ -161,6 +186,49 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
         }
     }, [initialPlayers, startingChips]);
 
+    // Apply positions when dealer changes
+    useEffect(() => {
+        setPlayers(prevPlayers => {
+            const updatedPlayers = [...prevPlayers];
+            // Clear all positions first
+            updatedPlayers.forEach(player => {
+                delete player.position;
+            });
+
+            // Apply new positions
+            const eligiblePlayers = updatedPlayers.filter(p => p.status === 'active' || p.chips > 0);
+            if (eligiblePlayers.length >= 2) {
+                // Set dealer
+                if (updatedPlayers[dealerIndex]) {
+                    updatedPlayers[dealerIndex].position = 'dealer';
+                }
+
+                if (eligiblePlayers.length === 2) {
+                    // Heads-up: other player is big blind
+                    const otherPlayerIndex = updatedPlayers.findIndex((p, i) =>
+                        i !== dealerIndex && eligiblePlayers.includes(p)
+                    );
+                    if (otherPlayerIndex !== -1) {
+                        updatedPlayers[otherPlayerIndex].position = 'big-blind';
+                    }
+                } else {
+                    // Multi-player: assign SB and BB
+                    const smallBlindIndex = (dealerIndex + 1) % updatedPlayers.length;
+                    const bigBlindIndex = (dealerIndex + 2) % updatedPlayers.length;
+
+                    if (updatedPlayers[smallBlindIndex] && eligiblePlayers.includes(updatedPlayers[smallBlindIndex])) {
+                        updatedPlayers[smallBlindIndex].position = 'small-blind';
+                    }
+                    if (updatedPlayers[bigBlindIndex] && eligiblePlayers.includes(updatedPlayers[bigBlindIndex])) {
+                        updatedPlayers[bigBlindIndex].position = 'big-blind';
+                    }
+                }
+            }
+
+            return updatedPlayers;
+        });
+    }, [dealerIndex]); // Only run when dealerIndex changes
+
     // Save game state to localStorage including hand and round
     useEffect(() => {
         const gameState = {
@@ -171,11 +239,12 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
             currentHand,
             currentRound,
             currentPlayerIndex,
+            dealerIndex,
             playersWhoHaveActed: Array.from(playersWhoHaveActed),
             timestamp: Date.now()
         };
         localStorage.setItem('currentGameState', JSON.stringify(gameState));
-    }, [gameName, players, pot, currentBet, currentHand, currentRound, currentPlayerIndex]);
+    }, [gameName, players, pot, currentBet, currentHand, currentRound, currentPlayerIndex, dealerIndex]);
 
     const animateChipTransfer = (playerId: string) => {
         setAnimatingChips(prev => [...prev, playerId]);
@@ -392,6 +461,9 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
     };
 
     const handleNewHand = () => {
+        // Advance dealer button to next player
+        const nextDealerIndex = advanceDealerButton() ?? dealerIndex;
+
         setPlayers(prev => prev.map(player => ({
             ...player,
             status: player.chips > 0 ? 'active' as const : 'folded' as const,
@@ -404,12 +476,9 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
         setCurrentRound('pre-flop');
         // Reset players who have acted for new hand
         setPlayersWhoHaveActed(new Set());
-        // Reset to first active player for new hand
-        setCurrentPlayerIndex(0);
-        const firstActiveIndex = players.findIndex(p => p.status === 'active' || (p.chips > 0));
-        if (firstActiveIndex !== -1) {
-            setCurrentPlayerIndex(firstActiveIndex);
-        }
+        // Reset to first active player for new hand (small blind typically starts)
+        const smallBlindIndex = (nextDealerIndex + 1) % players.length;
+        setCurrentPlayerIndex(smallBlindIndex);
     };
 
     const handleBackToSetup = () => {
@@ -558,7 +627,13 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
                         ) : null}
                     </div>
                     <div className="order-2 sm:order-3 w-full sm:w-auto">
-                        {/* Empty space for layout balance */}
+                        <button
+                            onClick={() => setShowPositionSettings(true)}
+                            className="btn-action bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-lg text-sm transition-colors flex items-center gap-2 mx-auto sm:mx-0"
+                        >
+                            <span>🎯</span>
+                            <span>Positions</span>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -665,11 +740,27 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
                                             <h3 className="text-responsive-lg font-bold text-white truncate">
                                                 {player.name}
                                             </h3>
-                                            <div className={`inline-flex px-3 py-1.5 rounded-full text-responsive-xs font-semibold ${player.status === 'active' ? 'bg-gradient-to-r from-green-500/20 to-green-600/20 text-green-400 border border-green-500/40' :
-                                                player.status === 'all-in' ? 'bg-gradient-to-r from-poker-gold-500/20 to-poker-gold-600/20 text-poker-gold-400 border border-poker-gold-500/40' :
-                                                    'bg-gradient-to-r from-gray-600/20 to-gray-700/20 text-gray-400 border border-gray-600/40'
-                                                }`}>
-                                                {getPlayerStatusText(player.status)}
+                                            <div className="flex flex-wrap gap-2">
+                                                {/* Position Badge */}
+                                                {player.position && (
+                                                    <div className={`inline-flex px-2 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${player.position === 'dealer'
+                                                        ? 'bg-gradient-to-r from-yellow-500/20 to-yellow-600/20 text-yellow-400 border border-yellow-500/40'
+                                                        : player.position === 'small-blind'
+                                                            ? 'bg-gradient-to-r from-blue-500/20 to-blue-600/20 text-blue-400 border border-blue-500/40'
+                                                            : 'bg-gradient-to-r from-purple-500/20 to-purple-600/20 text-purple-400 border border-purple-500/40'
+                                                        }`}>
+                                                        {player.position === 'dealer' ? '🎯 DEALER' :
+                                                            player.position === 'small-blind' ? 'SB' : 'BB'}
+                                                    </div>
+                                                )}
+
+                                                {/* Status Badge */}
+                                                <div className={`inline-flex px-3 py-1.5 rounded-full text-responsive-xs font-semibold ${player.status === 'active' ? 'bg-gradient-to-r from-green-500/20 to-green-600/20 text-green-400 border border-green-500/40' :
+                                                    player.status === 'all-in' ? 'bg-gradient-to-r from-poker-gold-500/20 to-poker-gold-600/20 text-poker-gold-400 border border-poker-gold-500/40' :
+                                                        'bg-gradient-to-r from-gray-600/20 to-gray-700/20 text-gray-400 border border-gray-600/40'
+                                                    }`}>
+                                                    {getPlayerStatusText(player.status)}
+                                                </div>
                                             </div>
                                         </div>
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-responsive-sm">
@@ -825,6 +916,92 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
                 onDistribute={handlePotDistribution}
                 onCancel={handleCancelDistribution}
             />
+
+            {/* Position Settings Modal */}
+            {showPositionSettings && (
+                <div className="fixed inset-0 bg-dark-900/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+                    <div className="bg-dark-800 rounded-xl border border-dark-600 max-w-md w-full max-h-[80vh] overflow-y-auto">
+                        <div className="p-6">
+                            <div className="flex items-center justify-between mb-6">
+                                <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                                    <span>🎯</span>
+                                    Player Positions
+                                </h2>
+                                <button
+                                    onClick={() => setShowPositionSettings(false)}
+                                    className="text-gray-400 hover:text-white transition-colors"
+                                >
+                                    ✕
+                                </button>
+                            </div>
+
+                            <div className="space-y-4 mb-6">
+                                <div className="text-sm text-gray-400">
+                                    Choose the dealer for this hand. Small blind and big blind will be assigned automatically based on poker rules.
+                                </div>
+
+                                <div className="space-y-3">
+                                    {players.filter(p => p.status === 'active' || p.chips > 0).map((player, index) => (
+                                        <div
+                                            key={player.id}
+                                            className={`border rounded-lg p-4 cursor-pointer transition-all ${dealerIndex === players.indexOf(player)
+                                                ? 'border-yellow-500 bg-yellow-500/10'
+                                                : 'border-dark-600 hover:border-dark-500'
+                                                }`}
+                                            onClick={() => setDealerIndex(players.indexOf(player))}
+                                        >
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-3">
+                                                    <div className={`w-4 h-4 rounded-full border-2 ${dealerIndex === players.indexOf(player)
+                                                        ? 'border-yellow-500 bg-yellow-500'
+                                                        : 'border-gray-600'
+                                                        }`}></div>
+                                                    <span className="font-medium text-white">{player.name}</span>
+                                                </div>
+                                                <div className="flex gap-1">
+                                                    {player.position === 'dealer' && (
+                                                        <span className="px-2 py-1 text-xs bg-yellow-500/20 text-yellow-400 rounded">
+                                                            🎯 DEALER
+                                                        </span>
+                                                    )}
+                                                    {player.position === 'small-blind' && (
+                                                        <span className="px-2 py-1 text-xs bg-blue-500/20 text-blue-400 rounded">
+                                                            SB
+                                                        </span>
+                                                    )}
+                                                    {player.position === 'big-blind' && (
+                                                        <span className="px-2 py-1 text-xs bg-purple-500/20 text-purple-400 rounded">
+                                                            BB
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={() => setShowPositionSettings(false)}
+                                    className="flex-1 btn-secondary bg-dark-700 hover:bg-dark-600 text-white py-2 px-4 rounded-lg transition-colors"
+                                >
+                                    Done
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        const nextDealerIndex = advanceDealerButton() ?? dealerIndex;
+                                        showToast(`Dealer button moved to ${players[nextDealerIndex]?.name}`, 'success');
+                                    }}
+                                    className="flex-1 btn-primary bg-yellow-600 hover:bg-yellow-700 text-white py-2 px-4 rounded-lg transition-colors"
+                                >
+                                    Auto-Advance
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Confirmation Dialogs */}
             <ConfirmationDialog
