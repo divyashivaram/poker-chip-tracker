@@ -99,11 +99,16 @@ The app uses a carefully chosen dark color palette:
 
 This is a focused poker utility app. If you'd like to contribute:
 
-1. Fork the repository
+1. Clone the repository
 2. Create a feature branch
 3. Make your changes
 4. Test thoroughly on mobile devices
 5. Submit a pull request
+
+## TODO
+1. Organise game UI, clean up
+2. BB, SB, dealer - comply with game rules
+
 
 ## License
 

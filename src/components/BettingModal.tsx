@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 
 interface BettingModalProps {
     isOpen: boolean;
@@ -31,7 +31,7 @@ const BettingModal: React.FC<BettingModalProps> = ({
     const callAmount = currentBet - playerCurrentBet;
 
     // Unified function to update all input methods simultaneously
-    const updateBetAmount = (newAmount: number, source: 'slider' | 'input' | 'quick-bet' = 'input') => {
+    const updateBetAmount = useCallback((newAmount: number, source: 'slider' | 'input' | 'quick-bet' = 'input') => {
         // Validate the amount
         if (isNaN(newAmount) || newAmount < 0) {
             if (source === 'input') {
@@ -54,7 +54,7 @@ const BettingModal: React.FC<BettingModalProps> = ({
         } else {
             setError('');
         }
-    };
+    }, [minBet, maxBet]);
 
     // Reset modal when opened
     useEffect(() => {
@@ -66,7 +66,7 @@ const BettingModal: React.FC<BettingModalProps> = ({
             updateBetAmount(finalBet, 'quick-bet');
             setIsValidating(false);
         }
-    }, [isOpen, minBet, maxBet]);
+    }, [isOpen, updateBetAmount]);
 
     // Handle slider changes
     const handleSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -167,54 +167,64 @@ const BettingModal: React.FC<BettingModalProps> = ({
                     )}
                 </div>
 
-                {/* Bet Amount Slider */}
+                {/* Combined Slider and Input Control */}
                 <div className="p-4 border-b border-dark-600">
                     <div className="text-gray-400 text-responsive-sm mb-3 flex items-center gap-2">
                         <span>🎚️</span>
-                        <span>Bet Amount Slider (multiples of $10)</span>
+                        <span>Adjust Bet Amount</span>
                     </div>
-                    <div className="relative mb-4">
-                        <input
-                            type="range"
-                            min={Math.ceil(minBet / 10) * 10}
-                            max={Math.floor(maxBet / 10) * 10}
-                            step={10}
-                            value={Math.round(betAmount / 10) * 10}
-                            onChange={handleSliderChange}
-                            className="w-full h-3 bg-dark-600 rounded-lg appearance-none cursor-pointer slider"
-                            style={{
-                                background: `linear-gradient(to right, 
-                                    #10b981 0%, 
-                                    #10b981 ${((Math.round(betAmount / 10) * 10 - Math.ceil(minBet / 10) * 10) / (Math.floor(maxBet / 10) * 10 - Math.ceil(minBet / 10) * 10)) * 100}%, 
-                                    #374151 ${((Math.round(betAmount / 10) * 10 - Math.ceil(minBet / 10) * 10) / (Math.floor(maxBet / 10) * 10 - Math.ceil(minBet / 10) * 10)) * 100}%, 
-                                    #374151 100%)`
-                            }}
-                        />
-                        <div className="flex justify-between text-xs text-gray-400 mt-1">
-                            <span>${(Math.ceil(minBet / 10) * 10).toLocaleString()}</span>
-                            <span>${(Math.floor(maxBet / 10) * 10).toLocaleString()}</span>
-                        </div>
-                        <div className="text-center text-xs text-green-400 mt-2">
-                            Move slider to adjust bet in $10 increments
-                        </div>
-                    </div>
-                </div>
 
-                {/* Custom Input */}
-                <div className="p-4 border-b border-dark-600">
-                    <div className="text-gray-400 text-responsive-sm mb-3">Or Enter Exact Amount</div>
-                    <input
-                        type="number"
-                        value={customInput}
-                        onChange={handleInputChange}
-                        placeholder="Enter amount"
-                        className={`input-field w-full text-center text-responsive-xl ${error ? 'border-red-500 ring-red-500' : ''
-                            }`}
-                        min={minBet}
-                        max={maxBet}
-                    />
+                    {/* Slider and Input Container */}
+                    <div className="flex items-center gap-3 mb-4">
+                        {/* Slider */}
+                        <div className="flex-1">
+                            <input
+                                type="range"
+                                min={Math.ceil(minBet / 10) * 10}
+                                max={Math.floor(maxBet / 10) * 10}
+                                step={10}
+                                value={Math.round(betAmount / 10) * 10}
+                                onChange={handleSliderChange}
+                                className="w-full h-3 bg-dark-600 rounded-lg appearance-none cursor-pointer slider"
+                                style={{
+                                    background: `linear-gradient(to right, 
+                                        #10b981 0%, 
+                                        #10b981 ${((Math.round(betAmount / 10) * 10 - Math.ceil(minBet / 10) * 10) / (Math.floor(maxBet / 10) * 10 - Math.ceil(minBet / 10) * 10)) * 100}%, 
+                                        #374151 ${((Math.round(betAmount / 10) * 10 - Math.ceil(minBet / 10) * 10) / (Math.floor(maxBet / 10) * 10 - Math.ceil(minBet / 10) * 10)) * 100}%, 
+                                        #374151 100%)`
+                                }}
+                            />
+                        </div>
+
+                        {/* Text Input */}
+                        <div className="w-24">
+                            <input
+                                type="number"
+                                value={customInput}
+                                onChange={handleInputChange}
+                                placeholder="Amount"
+                                className={`input-field w-full text-center text-responsive-base font-semibold ${error ? 'border-red-500 ring-red-500' : 'border-poker-green-500/30 focus:border-poker-green-500/50'
+                                    }`}
+                                min={minBet}
+                                max={maxBet}
+                            />
+                        </div>
+                    </div>
+
+                    {/* Slider Range Labels */}
+                    <div className="flex justify-between text-xs text-gray-400 mb-2">
+                        <span>${(Math.ceil(minBet / 10) * 10).toLocaleString()}</span>
+                        <span>${(Math.floor(maxBet / 10) * 10).toLocaleString()}</span>
+                    </div>
+
+                    {/* Helper Text */}
+                    <div className="text-center text-xs text-gray-500">
+                        Drag slider or enter exact amount
+                    </div>
+
+                    {/* Error Message */}
                     {error && (
-                        <div className="text-red-400 text-responsive-xs text-center mt-2 animate-slideDown">
+                        <div className="text-red-400 text-responsive-xs text-center mt-3 animate-slideDown">
                             {error}
                         </div>
                     )}
