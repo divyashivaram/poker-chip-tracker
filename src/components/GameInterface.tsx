@@ -733,20 +733,20 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
                                 className={`card-interactive relative transition-all duration-500 ${player.status === 'folded' ? 'opacity-30' :
                                     isWaitingPlayer ? 'opacity-60 scale-[0.98]' : ''
                                     } ${isAnimating ? 'chip-pulse' : ''} ${isCurrentPlayer ?
-                                        'border-4 border-poker-green-500 shadow-glow transform scale-[1.02] bg-gradient-to-br from-poker-green-500/5 to-dark-850/90' :
+                                        'border-2 border-poker-green-500 transform scale-[1.02] bg-gradient-to-br from-poker-green-500/5 to-dark-850/90' :
                                         ''
                                     }`}
                                 style={{ animationDelay: `${index * 0.1}s` }}
                             >
-                                {/* Active Player Turn Indicator */}
+                                {/* Player Info */}
                                 {isCurrentPlayer && (
-                                    <div className="absolute -top-2 left-1/2 transform -translate-x-1/2 z-10">
-                                        <div className="bg-gradient-to-r from-poker-green-500 to-poker-green-600 text-white px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider shadow-glow animate-pulse">
-                                            🎯 Your Turn
+                                    <div className="mb-4">
+                                        <div className="bg-gradient-to-r from-poker-green-500 to-poker-green-600 text-white px-4 py-2 rounded-lg text-sm font-bold uppercase tracking-wider flex items-center justify-center gap-2">
+                                            <span>▶️</span>
+                                            <span>Your Turn</span>
                                         </div>
                                     </div>
                                 )}
-                                {/* Player Info */}
                                 <div className="flex flex-col lg:flex-row justify-between items-start gap-4 mb-6">
                                     <div className="flex-1 min-w-0">
                                         <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-3">
