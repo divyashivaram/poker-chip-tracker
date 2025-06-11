@@ -441,7 +441,6 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
     };
 
     const activePlayers = players.filter(p => p.status === 'active').length;
-    const totalChipsInPlay = players.reduce((sum, p) => sum + (p.chips || 0), 0) + (pot || 0);
     const currentPlayer = players[currentPlayerIndex];
 
     return (
@@ -471,12 +470,21 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
                         </div>
                         {/* Current Player Indicator */}
                         {currentPlayer && currentPlayer.status === 'active' && (
-                            <div className="mt-3 flex items-center justify-center gap-2">
-                                <div className="w-3 h-3 bg-poker-green-500 rounded-full animate-pulse"></div>
-                                <span className="text-poker-green-400 font-semibold text-sm">
-                                    {currentPlayer.name}'s Turn
-                                </span>
-                                <div className="w-3 h-3 bg-poker-green-500 rounded-full animate-pulse"></div>
+                            <div className="mt-3 flex flex-col items-center justify-center gap-2">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-3 h-3 bg-poker-green-500 rounded-full animate-pulse"></div>
+                                    <span className="text-poker-green-400 font-semibold text-sm">
+                                        {currentPlayer.name}'s Turn
+                                    </span>
+                                    <div className="w-3 h-3 bg-poker-green-500 rounded-full animate-pulse"></div>
+                                </div>
+                                {/* Betting Action Context */}
+                                <div className="text-xs text-gray-400">
+                                    {currentBet === 0 ?
+                                        'No bets placed - can Check or Bet' :
+                                        `Current bet: $${currentBet.toLocaleString()} - must Call or Raise`
+                                    }
+                                </div>
                             </div>
                         )}
                     </div>
@@ -540,12 +548,27 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
                 <div className="max-w-4xl mx-auto space-y-4">
                     {players.map((player, index) => {
                         const isAnimating = animatingChips.includes(player.id);
-                        const callAmount = (currentBet || 0) - (player.currentBet || 0);
+                        const callAmount = Math.max(0, (currentBet || 0) - (player.currentBet || 0));
+                        const canCheck = callAmount === 0; // Can check if no bet to call
                         const canCall = callAmount > 0 && (player.chips || 0) >= callAmount;
-                        const canCheck = callAmount === 0;
                         const canRaise = (player.chips || 0) > callAmount;
                         const isCurrentPlayer = currentPlayerIndex === index && player.status === 'active';
                         const isWaitingPlayer = !isCurrentPlayer && player.status === 'active';
+
+                        // Determine the action text and icon for the middle button
+                        const getCheckCallAction = () => {
+                            if (canCheck) {
+                                return { text: 'Check', icon: '✋', disabled: false };
+                            } else if (callAmount >= (player.chips || 0)) {
+                                return { text: 'All-In', icon: '🚨', disabled: false };
+                            } else if (canCall) {
+                                return { text: `Call $${callAmount.toLocaleString()}`, icon: '💰', disabled: false };
+                            } else {
+                                return { text: 'Call', icon: '💰', disabled: true };
+                            }
+                        };
+
+                        const checkCallAction = getCheckCallAction();
 
                         return (
                             <div
@@ -616,16 +639,17 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
 
                                         <button
                                             onClick={() => handleCall(player.id)}
-                                            disabled={!canCall && !canCheck}
-                                            className="btn-action bg-gradient-to-r from-accent-blue to-blue-600 hover:from-blue-400 hover:to-blue-500 disabled:from-gray-600 disabled:to-gray-700 disabled:cursor-not-allowed text-white border border-blue-400/30 disabled:border-gray-600/30"
+                                            disabled={checkCallAction.disabled}
+                                            className={`btn-action transition-all duration-200 ${checkCallAction.disabled
+                                                ? 'bg-gradient-to-r from-gray-600 to-gray-700 cursor-not-allowed text-white border border-gray-600/30'
+                                                : canCheck
+                                                    ? 'bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-400 hover:to-indigo-500 text-white border border-indigo-400/30'
+                                                    : 'bg-gradient-to-r from-accent-blue to-blue-600 hover:from-blue-400 hover:to-blue-500 text-white border border-blue-400/30'
+                                                }`}
                                         >
                                             <span className="flex items-center justify-center gap-2">
-                                                <span>{canCheck ? '✋' : callAmount >= (player.chips || 0) ? '🚨' : '💰'}</span>
-                                                <span>
-                                                    {canCheck ? 'Check' :
-                                                        callAmount >= (player.chips || 0) ? 'All-In' :
-                                                            `Call $${(callAmount || 0).toLocaleString()}`}
-                                                </span>
+                                                <span className="text-lg">{checkCallAction.icon}</span>
+                                                <span className="font-semibold">{checkCallAction.text}</span>
                                             </span>
                                         </button>
 
