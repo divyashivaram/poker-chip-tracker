@@ -610,11 +610,11 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
                         {bettingComplete ? (
                             <div className="mt-3 flex flex-col items-center justify-center gap-2">
                                 <div className="flex items-center gap-2">
-                                    <div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></div>
-                                    <span className="text-blue-400 font-semibold text-sm">
+                                    <div className="w-3 h-3 bg-slate-500 rounded-full animate-pulse"></div>
+                                    <span className="text-slate-400 font-semibold text-sm">
                                         Betting Round Complete
                                     </span>
-                                    <div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></div>
+                                    <div className="w-3 h-3 bg-slate-500 rounded-full animate-pulse"></div>
                                 </div>
                                 <div className="text-xs text-gray-400">
                                     All players have acted - ready to advance to next round
@@ -693,9 +693,9 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
                 </div>
                 {currentBet > 0 && (
                     <div className="flex items-center justify-center gap-2 text-gray-300 text-sm">
-                        <div className="w-2 h-2 bg-accent-blue rounded-full animate-pulse"></div>
+                        <div className="w-2 h-2 bg-slate-500 rounded-full animate-pulse"></div>
                         <span>Current bet: ${(currentBet || 0).toLocaleString()}</span>
-                        <div className="w-2 h-2 bg-accent-blue rounded-full animate-pulse"></div>
+                        <div className="w-2 h-2 bg-slate-500 rounded-full animate-pulse"></div>
                     </div>
                 )}
             </div>
@@ -759,7 +759,7 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
                                                     <div className={`inline-flex px-2 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${player.position === 'dealer'
                                                         ? 'bg-gradient-to-r from-yellow-500/20 to-yellow-600/20 text-yellow-400 border border-yellow-500/40'
                                                         : player.position === 'small-blind'
-                                                            ? 'bg-gradient-to-r from-blue-500/20 to-blue-600/20 text-blue-400 border border-blue-500/40'
+                                                            ? 'bg-gradient-to-r from-slate-500/20 to-slate-600/20 text-slate-400 border border-slate-500/40'
                                                             : 'bg-gradient-to-r from-purple-500/20 to-purple-600/20 text-purple-400 border border-purple-500/40'
                                                         }`}>
                                                         {player.position === 'dealer' ? '🎯 DEALER' :
@@ -816,8 +816,8 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
                                             className={`btn-action transition-all duration-200 ${checkCallAction.disabled
                                                 ? 'bg-gradient-to-r from-gray-600 to-gray-700 cursor-not-allowed text-white border border-gray-600/30'
                                                 : canCheck
-                                                    ? 'bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-400 hover:to-indigo-500 text-white border border-indigo-400/30'
-                                                    : 'bg-gradient-to-r from-accent-blue to-blue-600 hover:from-blue-400 hover:to-blue-500 text-white border border-blue-400/30'
+                                                    ? 'bg-gradient-to-r from-accent-teal to-teal-600 hover:from-teal-500 hover:to-teal-600 text-white border border-teal-400/30'
+                                                    : 'bg-gradient-to-r from-accent-blue to-slate-600 hover:from-slate-400 hover:to-slate-500 text-white border border-slate-400/30'
                                                 }`}
                                         >
                                             <span className="flex items-center justify-center gap-2">
@@ -860,7 +860,7 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
                                 {/* Betting Complete Indicator for Active Players */}
                                 {player.status === 'active' && (player.chips || 0) > 0 && bettingComplete && (
                                     <div className="text-center py-4 mt-4">
-                                        <div className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600/20 to-blue-700/20 text-blue-400 px-6 py-3 rounded-full border border-blue-600/40 text-responsive-sm">
+                                        <div className="inline-flex items-center gap-2 bg-gradient-to-r from-slate-600/20 to-slate-700/20 text-slate-400 px-6 py-3 rounded-full border border-slate-600/40 text-responsive-sm">
                                             <span>✅</span>
                                             <span>Betting complete - waiting for next round</span>
                                         </div>
@@ -1012,7 +1012,7 @@ const GameInterface: React.FC<GameInterfaceProps> = ({
                                                         </span>
                                                     )}
                                                     {player.position === 'small-blind' && (
-                                                        <span className="px-2 py-1 text-xs bg-blue-500/20 text-blue-400 rounded">
+                                                        <span className="px-2 py-1 text-xs bg-slate-500/20 text-slate-400 rounded">
                                                             SB
                                                         </span>
                                                     )}

@@ -254,12 +254,12 @@ const BettingModal: React.FC<BettingModalProps> = ({
                                         key={index}
                                         onClick={() => handleQuickBet(option.amount)}
                                         className={`relative overflow-hidden transition-all duration-200 p-3 rounded-xl font-semibold transform hover:scale-105 active:scale-95 border-2 ${isSelected
-                                                ? isAllIn
-                                                    ? 'bg-gradient-to-r from-yellow-600 to-yellow-700 border-yellow-600 text-white shadow-glow-gold'
-                                                    : 'bg-gradient-to-r from-poker-green-500 to-poker-green-600 border-poker-green-500 text-white shadow-glow'
-                                                : isAllIn
-                                                    ? 'border-yellow-500 text-yellow-400 bg-transparent hover:bg-yellow-900/20 hover:border-yellow-400'
-                                                    : 'border-poker-green-500 text-poker-green-400 bg-transparent hover:bg-poker-green-900/20 hover:border-poker-green-400'
+                                            ? isAllIn
+                                                ? 'bg-gradient-to-r from-yellow-600 to-yellow-700 border-yellow-600 text-white shadow-glow-gold'
+                                                : 'bg-gradient-to-r from-poker-green-500 to-poker-green-600 border-poker-green-500 text-white shadow-glow'
+                                            : isAllIn
+                                                ? 'border-yellow-500 text-yellow-400 bg-transparent hover:bg-yellow-900/20 hover:border-yellow-400'
+                                                : 'border-poker-green-500 text-poker-green-400 bg-transparent hover:bg-poker-green-900/20 hover:border-poker-green-400'
                                             }`}
                                     >
                                         <div className="relative z-10">
